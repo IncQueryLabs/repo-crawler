@@ -1,0 +1,16 @@
+.gradle
+build/
+out/
+
+elements/
+
+gradle-app.setting
+
+!gradle-wrapper.jar
+
+.gradletasknamecache
+
+.idea/
+*.iml
+
+server.config
