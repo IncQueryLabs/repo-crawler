@@ -19,12 +19,12 @@ class RESTVerticle() : AbstractVerticle(){
 
     override fun start() {
         val client = WebClient.create(vertx,WebClientOptions())
-        val twcMap = vertx.sharedData().getLocalMap<Any,Any>("twcMap")
+        val twcMap = vertx.sharedData().getLocalMap<Any,Any>(DataConstants.TWCMAP)
 
         serverPath = twcMap.get("server_path").toString()
         port =  twcMap.get("server_port") as Int
 
-        vertx.eventBus().consumer<Any>("twc.rest.twcvert",{ message ->
+        vertx.eventBus().consumer<Any>(DataConstants.TWCVERT_ADDRESS,{ message ->
             val json = JsonObject(message.body().toString())
             val obj = json.getJsonObject("obj")
 
@@ -89,10 +89,11 @@ class RESTVerticle() : AbstractVerticle(){
                 error("Counter: queries not available.")
             }
         })
-        val workspaceId = obj.getString("workspace_id")
-        val resourceId = obj.getString("resource_id")
-        val branchId = obj.getString("branch_id")
-        val elementId = obj.getString("element_id")
+        val workspaceId = obj.getString(DataConstants.WORKSPACE_ID)
+        val resourceId = obj.getString(DataConstants.RESOURCE_ID)
+        val branchId = obj.getString(DataConstants.BRANCH_ID)
+        val elementId = obj.getString(DataConstants.ELEMENT_ID)
+        // TODO rewrite to Post
         client.get(port,serverPath,
                 "/osmc/workspaces/${workspaceId}/resources/${resourceId}/branches/${branchId}/elements/${elementId}")
                 .putHeader("content-type","application/ld+json")
@@ -110,7 +111,7 @@ class RESTVerticle() : AbstractVerticle(){
                             val element = Element(elementId,branchId,resourceId,workspaceId,
                                     data.getJsonObject(0).getJsonArray("ldp:contains"))
 
-                            vertx.eventBus().send("twc.rest.main", Json.encode(Message("element", element)))
+                            vertx.eventBus().send(DataConstants.TWCMAIN_ADDRESS, Json.encode(Message("element", element)))
 
                         } else {
                             println("${ar.result().statusCode()} : ${ar.result().statusMessage()}")
@@ -159,9 +160,9 @@ class RESTVerticle() : AbstractVerticle(){
     }
 
     private fun  getRootElementIds(client: WebClient, twcMap: LocalMap<Any, Any>, obj: JsonObject) {
-        val workspaceId = obj.getString("workspace_id")
-        val resourceId = obj.getString("resource_id")
-        val branchId = obj.getString("branch_id")
+        val workspaceId = obj.getString(DataConstants.WORKSPACE_ID)
+        val resourceId = obj.getString(DataConstants.RESOURCE_ID)
+        val branchId = obj.getString(DataConstants.BRANCH_ID)
         val revId = obj.getInteger("rev_id")
         client.get(port,serverPath,
                 "/osmc/workspaces/${workspaceId}/resources/${resourceId}/branches/${branchId}/revisions/${revId}")
@@ -178,7 +179,7 @@ class RESTVerticle() : AbstractVerticle(){
                             val revision = Revision(revId,branchId,resourceId,workspaceId,
                                     data.getJsonObject(0).getJsonArray("rootObjectIDs"))
                             //println(revision)
-                            vertx.eventBus().send("twc.rest.main", Json.encode(Message("revision", revision)))
+                            vertx.eventBus().send(DataConstants.TWCMAIN_ADDRESS, Json.encode(Message("revision", revision)))
 
                         } else {
                             println("${ar.result().statusCode()} : ${ar.result().statusMessage()}")
@@ -193,9 +194,9 @@ class RESTVerticle() : AbstractVerticle(){
     }
 
     private fun  getRevisions(client: WebClient, twcMap: LocalMap<Any, Any>, obj: JsonObject) {
-        val workspaceId = obj.getString("workspace_id")
-        val resourceId = obj.getString("resource_id")
-        val branchId = obj.getString("branch_id")
+        val workspaceId = obj.getString(DataConstants.WORKSPACE_ID)
+        val resourceId = obj.getString(DataConstants.RESOURCE_ID)
+        val branchId = obj.getString(DataConstants.BRANCH_ID)
         client.get(port,serverPath,
                 "/osmc/workspaces/${workspaceId}/resources/${resourceId}/branches/${branchId}/revisions")
                 .putHeader("content-type","application/ld+json")
@@ -209,7 +210,7 @@ class RESTVerticle() : AbstractVerticle(){
                             val data = ar.result().bodyAsJsonArray()
                             val branch = Branch(branchId,resourceId,workspaceId,data.getJsonObject(0).getJsonArray("ldp:contains"))
                             //println(resource)
-                            vertx.eventBus().send("twc.rest.main", Json.encode(Message("branch", branch)))
+                            vertx.eventBus().send(DataConstants.TWCMAIN_ADDRESS, Json.encode(Message("branch", branch)))
 
                         } else {
                             println("${ar.result().statusCode()} : ${ar.result().statusMessage()}")
@@ -224,8 +225,8 @@ class RESTVerticle() : AbstractVerticle(){
     }
 
     private fun  getBranches(client: WebClient, twcMap: LocalMap<Any, Any>, obj: JsonObject) {
-        val workspaceId = obj.getString("workspace_id")
-        val resourceId = obj.getString("resource_id")
+        val workspaceId = obj.getString(DataConstants.WORKSPACE_ID)
+        val resourceId = obj.getString(DataConstants.RESOURCE_ID)
         client.get(port,serverPath,"/osmc/workspaces/${workspaceId}/resources/${resourceId}/branches")
                 .putHeader("content-type","application/ld+json")
                 .putHeader("Authorization", "${twcMap.get("credential")}")
@@ -238,7 +239,7 @@ class RESTVerticle() : AbstractVerticle(){
                             val data = ar.result().bodyAsJsonObject()
                             val resource = Resource(resourceId,workspaceId,data.getJsonArray("ldp:contains"))
                             //println(resource)
-                            vertx.eventBus().send("twc.rest.main", Json.encode(Message("resource", resource)))
+                            vertx.eventBus().send(DataConstants.TWCMAIN_ADDRESS, Json.encode(Message("resource", resource)))
 
                         } else {
                             println("${ar.result().statusCode()} : ${ar.result().statusMessage()}")
@@ -253,7 +254,7 @@ class RESTVerticle() : AbstractVerticle(){
     }
 
     private fun  getResources(client: WebClient, twcMap: LocalMap<Any, Any>, obj: JsonObject) {
-        val workspaceId = obj.getString("workspace_id")
+        val workspaceId = obj.getString(DataConstants.WORKSPACE_ID)
         client.get(port,serverPath,"/osmc/workspaces/${workspaceId}/resources")
                 .putHeader("content-type","application/ld+json")
                 .putHeader("Authorization", "${twcMap.get("credential")}")
@@ -266,7 +267,7 @@ class RESTVerticle() : AbstractVerticle(){
                             val data = ar.result().bodyAsJsonArray()
                             val workspace = Workspace(workspaceId,data.getJsonObject(0).getJsonArray("ldp:contains"))
                             //println(workspace)
-                            vertx.eventBus().send("twc.rest.main", Json.encode(Message("workspace", workspace)))
+                            vertx.eventBus().send(DataConstants.TWCMAIN_ADDRESS, Json.encode(Message("workspace", workspace)))
 
                         } else {
                             println("${ar.result().statusCode()} : ${ar.result().statusMessage()}")
@@ -292,7 +293,7 @@ class RESTVerticle() : AbstractVerticle(){
                             val sessionCookie = ar.result().cookies()[1].split(';')[0]
                             twcMap.put("user_cookie",userCookie)
                             twcMap.put("session_cookie",sessionCookie)
-                            vertx.eventBus().send("twc.rest.main", Json.encode(Message("logged_in", JsonObject())))
+                            vertx.eventBus().send(DataConstants.TWCMAIN_ADDRESS, Json.encode(Message("logged_in", JsonObject())))
                         }else{
                             println("${ar.result().statusCode()} : ${ar.result().statusMessage()}")
                             myError()
@@ -317,7 +318,7 @@ class RESTVerticle() : AbstractVerticle(){
                         if(ar.result().statusCode()==204){
                             //twcMap.put("cookies",ar.result().cookies().toString())
                             twcMap.remove("cookies")
-                            vertx.eventBus().send("twc.rest.main", Json.encode(Message("exit", JsonObject())))
+                            vertx.eventBus().send(DataConstants.TWCMAIN_ADDRESS, Json.encode(Message("exit", JsonObject())))
                         }else{
                             println("${ar.result().statusCode()} : ${ar.result().statusMessage()}")
                             myError()
@@ -352,7 +353,7 @@ class RESTVerticle() : AbstractVerticle(){
                             //println(repo)
                             twcMap.put("repo",Json.encode(repo))
 
-                            vertx.eventBus().send("twc.rest.main",Json.encode(Message("repo", JsonObject())))
+                            vertx.eventBus().send(DataConstants.TWCMAIN_ADDRESS,Json.encode(Message("repo", JsonObject())))
                         } else {
                             println("${ar.result().statusCode()} : ${ar.result().statusMessage()}")
                             myError()
@@ -366,7 +367,7 @@ class RESTVerticle() : AbstractVerticle(){
     }
 
     private fun myError(){
-        vertx.eventBus().send("twc.rest.main",Json.encode(Message("error", JsonObject())))
+        vertx.eventBus().send(DataConstants.TWCMAIN_ADDRESS,Json.encode(Message("error", JsonObject())))
     }
 
 }

@@ -83,7 +83,7 @@ fun main(args: Array<String>) {
 
         File("server.config").writeText(Json.encode(Server(serverOpt,portOpt.toInt())))
         twcMap.put("server_path",serverOpt)
-        twcMap.put("server_port",portOpt)
+        twcMap.put("server_port",portOpt.toInt())
         println("New Server config")
 
     } else {
@@ -131,10 +131,6 @@ fun main(args: Array<String>) {
             })
         }
     })
-
-
-
-    vertx.eventBus().send("twc.rest.twcvert", Json.encode(Message("logout", JsonObject())))
 
 }
 
