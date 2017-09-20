@@ -10,7 +10,8 @@ data class Workspace(val id:String, val resources:JsonArray)
 data class Resource(val id:String, val workspace_id:String, val branches:JsonArray)
 data class Branch(val id:String,val resource_id:String ,val workspace_id:String,val revisions:JsonArray)
 data class Revision(val id:Int, val branch_id:String, val resource_id:String ,val workspace_id:String, val elements:JsonArray)
-data class Element(val id:String, val branch_id:String, val resource_id:String ,val workspace_id:String, val elements:JsonArray)
+data class Element(val id:String, val revision_id:Int, val branch_id:String, val resource_id:String ,val workspace_id:String, val elements:JsonArray)
+data class Elements(val revision_id:Int, val branch_id:String, val resource_id:String ,val workspace_id:String, val elements:JsonArray)
 
 object DataConstants {
     const val REPO = "repo"
@@ -21,7 +22,7 @@ object DataConstants {
     const val BRANCH = "branch"
     const val BRANCH_ID = "branch_id"
     const val REVISION = "revision"
-    const val REVISION_ID = "rev_id"
+    const val REVISION_ID = "revision_id"
     const val ELEMENTS = "elements"
     const val ELEMENT_IDS = "element_ids"
     const val ELEMENT = "element"

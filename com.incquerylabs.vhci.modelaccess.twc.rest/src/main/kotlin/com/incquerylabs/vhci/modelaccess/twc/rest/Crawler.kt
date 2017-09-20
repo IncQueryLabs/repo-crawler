@@ -1,19 +1,18 @@
 package com.incquerylabs.vhci.modelaccess.twc.rest
 
+import com.incquerylabs.vhci.modelaccess.twc.rest.data.*
 import io.vertx.core.Vertx
-import com.incquerylabs.vhci.modelaccess.twc.rest.data.Message
-import com.incquerylabs.vhci.modelaccess.twc.rest.data.Repo
-import com.incquerylabs.vhci.modelaccess.twc.rest.data.Server
 import io.vertx.core.json.Json
-import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
-import com.incquerylabs.vhci.modelaccess.twc.rest.data.User
 import com.incquerylabs.vhci.modelaccess.twc.rest.verticles.MainVerticle
 import com.incquerylabs.vhci.modelaccess.twc.rest.verticles.RESTVerticle
 import io.vertx.core.DeploymentOptions
 import io.vertx.core.cli.Argument
 import io.vertx.core.cli.CLI
 import io.vertx.core.cli.Option
+import io.vertx.core.shareddata.LocalMap
+import io.vertx.ext.web.client.WebClient
+import io.vertx.ext.web.client.WebClientOptions
 import java.io.File
 
 
@@ -133,6 +132,4 @@ fun main(args: Array<String>) {
     })
 
 }
-
-
 

@@ -114,7 +114,6 @@ class MainVerticle(val usr: String, val pswd: String) : AbstractVerticle() {
                 DataConstants.BRANCH -> {
 //                    println("Received Branch")
 //                    println(data)
-
                     val branchId = data.getString("id")
                     val resourceId = data.getString(DataConstants.RESOURCE_ID)
                     val workspaceId = data.getString(DataConstants.WORKSPACE_ID)
@@ -134,10 +133,10 @@ class MainVerticle(val usr: String, val pswd: String) : AbstractVerticle() {
 //                    println("Received Revision")
 //                    println(data)
 
+                    val revisionId = data.getInteger("id")
                     val branchId = data.getString(DataConstants.BRANCH_ID)
                     val resourceId = data.getString(DataConstants.RESOURCE_ID)
                     val workspaceId = data.getString(DataConstants.WORKSPACE_ID)
-                    val revisionId = data.getInteger("id")
                     val requestSingleElements = false
                     if(requestSingleElements) {
                         data.getJsonArray(DataConstants.ELEMENTS).forEach { element ->
@@ -147,6 +146,7 @@ class MainVerticle(val usr: String, val pswd: String) : AbstractVerticle() {
                                             .put(DataConstants.WORKSPACE_ID, workspaceId)
                                             .put(DataConstants.RESOURCE_ID, resourceId)
                                             .put(DataConstants.BRANCH_ID, branchId)
+                                            .put(DataConstants.REVISION_ID, revisionId)
                                             .put(DataConstants.ELEMENT_ID, elemId)
                             )))
                         }
@@ -187,10 +187,11 @@ class MainVerticle(val usr: String, val pswd: String) : AbstractVerticle() {
 //                    println("Received Elements")
 //                    println(data)
 
+                    val revisionId = data.getInteger(DataConstants.REVISION_ID)
                     val branchId = data.getString(DataConstants.BRANCH_ID)
                     val resourceId = data.getString(DataConstants.RESOURCE_ID)
                     val workspaceId = data.getString(DataConstants.WORKSPACE_ID)
-                    val element_ids = data.getJsonArray(DataConstants.ELEMENT_IDS).map { element ->
+                    val element_ids = data.getJsonArray(DataConstants.ELEMENTS).map { element ->
                         (element as JsonObject).getString("@id")
                     }
                     vertx.eventBus().send(DataConstants.TWCVERT_ADDRESS, Json.encode(Message(DataConstants.GET_ELEMENTS,
@@ -198,6 +199,7 @@ class MainVerticle(val usr: String, val pswd: String) : AbstractVerticle() {
                                     .put(DataConstants.WORKSPACE_ID, workspaceId)
                                     .put(DataConstants.RESOURCE_ID, resourceId)
                                     .put(DataConstants.BRANCH_ID, branchId)
+                                    .put(DataConstants.REVISION_ID, revisionId)
                                     .put(DataConstants.ELEMENT_IDS, element_ids)
                     )))
                 }
