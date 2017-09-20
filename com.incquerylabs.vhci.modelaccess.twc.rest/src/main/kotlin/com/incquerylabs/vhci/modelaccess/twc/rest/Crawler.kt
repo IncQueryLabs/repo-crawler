@@ -25,30 +25,56 @@ fun main(args: Array<String>) {
                     .setArgName("username")
                     .setIndex(0)
                     .setDefaultValue("admin")
-                    .setDescription("TWC username."))
+                    .setDescription("TWC username.")
+            )
             .addArgument(Argument()
                     .setArgName("password")
                     .setIndex(1)
                     .setDefaultValue("admin")
-                    .setDescription("TWC password."))
+                    .setDescription("TWC password.")
+            )
             .addOption(Option()
                     .setLongName("help")
                     .setShortName("h")
                     .setDescription("Show help site.")
-                    .setFlag(true))
+                    .setFlag(true)
+            )
             .addOption(Option()
                     .setLongName("server")
                     .setShortName("S")
-                    .setDescription("Set server path."))
+                    .setDescription("Set server path.")
+            )
             .addOption(Option()
                     .setLongName("port")
                     .setShortName("P")
-                    .setDescription("Set server port number."))
+                    .setDescription("Set server port number.")
+            )
             .addOption(Option()
                     .setLongName("instanceNum")
                     .setShortName("I")
                     .setDescription("Set number of RESTVerticle instances. Default:16")
-                    .setDefaultValue("16"))
+                    .setDefaultValue("16")
+            )
+            .addOption(Option()
+                    .setLongName("workspaceId")
+                    .setShortName("W")
+                    .setDescription("Select workspace to crawl")
+            )
+            .addOption(Option()
+                    .setLongName("resourceId")
+                    .setShortName("R")
+                    .setDescription("Select resource to crawl")
+            )
+            .addOption(Option()
+                    .setLongName("branchId")
+                    .setShortName("B")
+                    .setDescription("Select branch to crawl")
+            )
+            .addOption(Option()
+                    .setLongName("revision")
+                    .setShortName("REV")
+                    .setDescription("Select revision to crawl")
+            )
 
 
     val commandLine = cli.parse(args.asList(),false)
@@ -67,12 +93,32 @@ fun main(args: Array<String>) {
     val serverOpt = commandLine.getOptionValue<String>("server")
     val portOpt = commandLine.getOptionValue<String>("port")
     val instanceNum = commandLine.getOptionValue<String>("instanceNum").toInt()
+    val workspaceId = commandLine.getOptionValue<String>("workspaceId")
+    val resourceId = commandLine.getOptionValue<String>("resourceId")
+    val branchId = commandLine.getOptionValue<String>("branchId")
+    val revision = commandLine.getOptionValue<String>("revision")
 
     if(instanceNum!=null){
-        println(instanceNum)
+        println("Instance number set to $instanceNum")
         if(instanceNum<1){
             error("Number of Instances should be at least 1.")
         }
+    }
+    if(workspaceId != null){
+        println("Workspace ID set to $workspaceId")
+        twcMap.put(DataConstants.WORKSPACE_ID, workspaceId)
+    }
+    if(resourceId != null){
+        println("Resource ID set to $resourceId")
+        twcMap.put(DataConstants.RESOURCE_ID, resourceId)
+    }
+    if(branchId != null){
+        println("Branch ID set to $branchId")
+        twcMap.put(DataConstants.BRANCH_ID, branchId)
+    }
+    if(revision != null){
+        println("Revision set to $revision")
+        twcMap.put(DataConstants.REVISION, revision.toInt())
     }
 
     if(serverOpt != null && portOpt!=null){

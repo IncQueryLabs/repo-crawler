@@ -71,7 +71,39 @@ class MainVerticle(val usr: String, val pswd: String) : AbstractVerticle() {
                 DataConstants.LOGGED_IN -> {
                     println("Login complete")
 
-                    eb.send(DataConstants.TWCVERT_ADDRESS, Json.encode(Message(DataConstants.GET_WORKSPACES, JsonObject())))
+                    val workspaceId = twcMap.get(DataConstants.WORKSPACE_ID)
+                    val resourceId = twcMap.get(DataConstants.RESOURCE_ID)
+                    val branchId = twcMap.get(DataConstants.BRANCH_ID)
+                    val revision = twcMap.get(DataConstants.REVISION)
+                    if(workspaceId == null){
+                        eb.send(DataConstants.TWCVERT_ADDRESS, Json.encode(Message(DataConstants.GET_WORKSPACES, JsonObject())))
+                    } else if (resourceId == null){
+                        eb.send(DataConstants.TWCVERT_ADDRESS, Json.encode(Message(DataConstants.GET_RESOURCES, JsonObject().put(DataConstants.WORKSPACE_ID, workspaceId))))
+                    } else if (branchId == null) {
+                        eb.send(DataConstants.TWCVERT_ADDRESS, Json.encode(Message(DataConstants.GET_BRANCHES,
+                                JsonObject()
+                                        .put(DataConstants.WORKSPACE_ID, workspaceId)
+                                        .put(DataConstants.RESOURCE_ID, resourceId))))
+                    } else if (revision == null) {
+                        eb.send(DataConstants.TWCVERT_ADDRESS, Json.encode(Message(DataConstants.GET_REVISIONS,
+                                JsonObject()
+                                        .put(DataConstants.WORKSPACE_ID, workspaceId)
+                                        .put(DataConstants.RESOURCE_ID, resourceId)
+                                        .put(DataConstants.BRANCH_ID, branchId)
+                        )))
+                    } else {
+                        vertx.eventBus().send(DataConstants.TWCVERT_ADDRESS, Json.encode(Message(DataConstants.GET_ROOT_ELEMENT_IDS,
+                                JsonObject()
+                                        .put(DataConstants.WORKSPACE_ID, workspaceId)
+                                        .put(DataConstants.RESOURCE_ID, resourceId)
+                                        .put(DataConstants.BRANCH_ID, branchId)
+                                        .put(DataConstants.REVISION_ID, revision)
+                        )))
+                    }
+
+
+
+
                     //eb.send("twc.rest.twcvert", Json.encode(Message("logout", JsonObject())))
                 }
                 DataConstants.REPO -> {
@@ -168,6 +200,7 @@ class MainVerticle(val usr: String, val pswd: String) : AbstractVerticle() {
 //                    println("Received Element")
 //                    println(data)
 
+                    val revisionId = data.getInteger(DataConstants.REVISION_ID)
                     val branchId = data.getString(DataConstants.BRANCH_ID)
                     val resourceId = data.getString(DataConstants.RESOURCE_ID)
                     val workspaceId = data.getString(DataConstants.WORKSPACE_ID)
@@ -179,6 +212,7 @@ class MainVerticle(val usr: String, val pswd: String) : AbstractVerticle() {
                                         .put(DataConstants.WORKSPACE_ID, workspaceId)
                                         .put(DataConstants.RESOURCE_ID, resourceId)
                                         .put(DataConstants.BRANCH_ID, branchId)
+                                        .put(DataConstants.REVISION_ID, revisionId)
                                         .put(DataConstants.ELEMENT_ID, element_id)
                         )))
                     }
@@ -205,10 +239,16 @@ class MainVerticle(val usr: String, val pswd: String) : AbstractVerticle() {
                 }
                 DataConstants.ERROR -> {
                     println("\nExit")
+                    if(twcMap.get("cookies") != null) {
+                        eb.send(DataConstants.TWCVERT_ADDRESS, Json.encode(Message(DataConstants.LOGOUT, JsonObject())))
+                    }
                     vertx.close()
                 }
                 DataConstants.EXIT -> {
                     println("\nExit")
+                    if(twcMap.get("cookies") != null) {
+                        eb.send(DataConstants.TWCVERT_ADDRESS, Json.encode(Message(DataConstants.LOGOUT, JsonObject())))
+                    }
                     vertx.close()
                 }
 

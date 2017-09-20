@@ -25,6 +25,8 @@ class RESTVerticle() : AbstractVerticle(){
         serverPath = twcMap.get("server_path").toString()
         port =  twcMap.get("server_port") as Int
 
+        val debug = false
+
         vertx.eventBus().consumer<Any>(DataConstants.TWCVERT_ADDRESS,{ message ->
             val json = JsonObject(message.body().toString())
             val obj = json.getJsonObject("obj")
@@ -40,33 +42,52 @@ class RESTVerticle() : AbstractVerticle(){
                     logout(client,twcMap)
                 }
                 DataConstants.GET_WORKSPACES ->{
-//                    println("Query Workspaces")
+                    if (debug) {
+                        println("Query Workspaces")
+                        println(obj)
+                    }
                     getWorkspaces(client,twcMap)
                 }
                 DataConstants.GET_RESOURCES ->{
-//                    println("Query Resources")
-//                    println(obj)
+                    if (debug) {
+                        println("Query Resources")
+                        println(obj)
+                    }
                     getResources(client,twcMap,obj)
-                    //(client,twcMap)
                 }
                 DataConstants.GET_BRANCHES->{
-//                    println("Query Branches")
+                    if (debug) {
+                        println("Query Branches")
+                        println(obj)
+                    }
                     getBranches(client,twcMap,obj)
                 }
                 DataConstants.GET_REVISIONS ->{
-//                    println("Query Revisions")
+                    if (debug) {
+                        println("Query Revisions")
+                        println(obj)
+                    }
                     getRevisions(client,twcMap,obj)
                 }
                 DataConstants.GET_ROOT_ELEMENT_IDS ->{
-//                    println("Search Root Element Ids")
+                    if (debug) {
+                        println("Search Root Element Ids")
+                        println(obj)
+                    }
                     getRootElementIds(client,twcMap,obj)
                 }
                 DataConstants.GET_ELEMENT ->{
-                    //println("Query Element")
+                    if (debug) {
+                        println("Query Element")
+                        println(obj)
+                    }
                     getElement(client,twcMap,obj)
                 }
                 DataConstants.GET_ELEMENTS ->{
-                    //println("Query Element")
+                    if (debug) {
+                        println("Query Elements")
+                        println(obj)
+                    }
                     getElements(client,twcMap,obj)
                 }
                 else -> error("Unknown Command: ${json.getString("event")}")
@@ -110,8 +131,18 @@ class RESTVerticle() : AbstractVerticle(){
                                 element.getJsonObject(0).getJsonArray("ldp:contains")
                             }
                             if(!containedElements.isEmpty()) {
-                                val elementM = Elements(revisionId,branchId,resourceId,workspaceId,JsonArray(containedElements))
-                                vertx.eventBus().send(DataConstants.TWCMAIN_ADDRESS, Json.encode(Message(DataConstants.ELEMENTS, elementM)))
+                                val chunkSize = 1000
+                                if (chunkSize > 1) {
+                                    containedElements.withIndex().groupBy {
+                                        it.index / chunkSize
+                                    }.values.map { it.map { it.value } }.forEach {chunkList ->
+                                        val elementM = Elements(revisionId,branchId,resourceId,workspaceId,JsonArray(chunkList))
+                                        vertx.eventBus().send(DataConstants.TWCMAIN_ADDRESS, Json.encode(Message(DataConstants.ELEMENTS, elementM)))
+                                    }
+                                } else {
+                                    val elementM = Elements(revisionId,branchId,resourceId,workspaceId,JsonArray(containedElements))
+                                    vertx.eventBus().send(DataConstants.TWCMAIN_ADDRESS, Json.encode(Message(DataConstants.ELEMENTS, elementM)))
+                                }
                             }
 
                         } else {
