@@ -16,65 +16,71 @@ import io.vertx.ext.web.client.WebClientOptions
 import java.io.File
 
 
+private val CHUNK_SIZE = "chunkSize"
 
 fun main(args: Array<String>) {
 
     val cli = CLI.create("crawler")
             .setSummary("A REST Client to query all model element from server.")
-            .addArgument(Argument()
-                    .setArgName("username")
-                    .setIndex(0)
-                    .setDefaultValue("admin")
-                    .setDescription("TWC username.")
-            )
-            .addArgument(Argument()
-                    .setArgName("password")
-                    .setIndex(1)
-                    .setDefaultValue("admin")
-                    .setDescription("TWC password.")
-            )
-            .addOption(Option()
-                    .setLongName("help")
-                    .setShortName("h")
-                    .setDescription("Show help site.")
-                    .setFlag(true)
-            )
-            .addOption(Option()
-                    .setLongName("server")
-                    .setShortName("S")
-                    .setDescription("Set server path.")
-            )
-            .addOption(Option()
-                    .setLongName("port")
-                    .setShortName("P")
-                    .setDescription("Set server port number.")
-            )
-            .addOption(Option()
-                    .setLongName("instanceNum")
-                    .setShortName("I")
-                    .setDescription("Set number of RESTVerticle instances. Default:16")
-                    .setDefaultValue("16")
-            )
-            .addOption(Option()
-                    .setLongName("workspaceId")
-                    .setShortName("W")
-                    .setDescription("Select workspace to crawl")
-            )
-            .addOption(Option()
-                    .setLongName("resourceId")
-                    .setShortName("R")
-                    .setDescription("Select resource to crawl")
-            )
-            .addOption(Option()
-                    .setLongName("branchId")
-                    .setShortName("B")
-                    .setDescription("Select branch to crawl")
-            )
-            .addOption(Option()
-                    .setLongName("revision")
-                    .setShortName("REV")
-                    .setDescription("Select revision to crawl")
-            )
+            .addArguments(listOf(
+                    Argument()
+                        .setArgName("username")
+                        .setIndex(0)
+                        .setDefaultValue("admin")
+                        .setDescription("TWC username."),
+                    Argument()
+                        .setArgName("password")
+                        .setIndex(1)
+                        .setDefaultValue("admin")
+                        .setDescription("TWC password.")
+            ))
+            .addOptions(listOf(
+                    Option()
+                        .setLongName("help")
+                        .setShortName("h")
+                        .setDescription("Show help site.")
+                        .setFlag(true),
+                    Option()
+                        .setLongName("server")
+                        .setShortName("S")
+                        .setDescription("Set server path."),
+                    Option()
+                        .setLongName("port")
+                        .setShortName("P")
+                        .setDescription("Set server port number."),
+                    Option()
+                        .setLongName("instanceNum")
+                        .setShortName("I")
+                        .setDescription("Set number of RESTVerticle instances. Default:16")
+                        .setDefaultValue("16"),
+                    Option()
+                        .setLongName("workspaceId")
+                        .setShortName("W")
+                        .setDescription("Select workspace to crawl"),
+                    Option()
+                        .setLongName("resourceId")
+                        .setShortName("R")
+                        .setDescription("Select resource to crawl"),
+                    Option()
+                        .setLongName("branchId")
+                        .setShortName("B")
+                        .setDescription("Select branch to crawl"),
+                    Option()
+                        .setLongName("revision")
+                        .setShortName("REV")
+                        .setDescription("Select revision to crawl"),
+                    Option()
+                        .setLongName("debug")
+                        .setShortName("D")
+                        .setDescription("Set number of RESTVerticle instances. Default:16")
+                        .setFlag(true),
+                    Option()
+                        .setLongName(CHUNK_SIZE)
+                        .setShortName("C")
+                        .setDescription("Set the size of chunks to use when crawling elements. Default -1 to disable chunks")
+                        .setDefaultValue("-1")
+            ))
+
 
 
     val commandLine = cli.parse(args.asList(),false)
@@ -97,6 +103,15 @@ fun main(args: Array<String>) {
     val resourceId = commandLine.getOptionValue<String>("resourceId")
     val branchId = commandLine.getOptionValue<String>("branchId")
     val revision = commandLine.getOptionValue<String>("revision")
+    val chunkSize = commandLine.getOptionValue<String>(CHUNK_SIZE).toInt()
+    val debug = commandLine.isFlagEnabled("debug")
+
+    twcMap.put("debug", debug)
+    if(debug) {
+        println("Debug mode is enabled")
+    }
+    println("Chunk size is $chunkSize")
+    twcMap.put(CHUNK_SIZE, chunkSize)
 
     if(instanceNum!=null){
         println("Instance number set to $instanceNum")
@@ -120,6 +135,7 @@ fun main(args: Array<String>) {
         println("Revision set to $revision")
         twcMap.put(DataConstants.REVISION, revision.toInt())
     }
+
 
     if(serverOpt != null && portOpt!=null){
         if(!File("server.config").exists()){
