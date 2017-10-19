@@ -1,17 +1,18 @@
 package com.incquerylabs.vhci.modelaccess.twc.rest.data
 
 import io.vertx.core.json.JsonArray
+import io.vertx.core.json.JsonObject
 
-data class Message(val event:String, val obj:Any)
-data class User(val username:String, val password:String)
-data class Server(val path:String, val port:Int)
-data class Repo(val id: String, val workspaces:JsonArray)
-data class Workspace(val id:String, val resources:JsonArray)
-data class Resource(val id:String, val workspace_id:String, val branches:JsonArray)
-data class Branch(val id:String,val resource_id:String ,val workspace_id:String,val revisions:JsonArray)
-data class Revision(val id:Int, val branch_id:String, val resource_id:String ,val workspace_id:String, val elements:JsonArray)
-data class Element(val id:String, val revision_id:Int, val branch_id:String, val resource_id:String ,val workspace_id:String, val elements:JsonArray)
-data class Elements(val revision_id:Int, val branch_id:String, val resource_id:String ,val workspace_id:String, val elements:JsonArray)
+data class Message(val event: String = "", val obj: Any = "")
+data class User(val username: String, val password: String)
+data class Server(val path: String, val port: Int)
+data class Repo(val id: String = "", val workspaces: List<Any?> = emptyList())
+data class Workspace(val id: String = "", val resources: List<Any?> = emptyList())
+data class Resource(val id: String = "", val workspace_id: String = "", val branches: List<Any?> = emptyList())
+data class Branch(val id: String = "", val resource_id: String = "", val workspace_id: String = "", val revisions: List<Any?> = emptyList())
+data class Revision(val id: Int = -1, val branch_id: String = "", val resource_id: String = "", val workspace_id: String = "", val elements: List<Any?> = emptyList())
+data class Element(val id: String = "", val revision_id: Int = -1, val branch_id: String = "", val resource_id: String = "", val workspace_id: String = "", val elements: List<Any?> = emptyList())
+data class Elements(val revision_id: Int = -1, val branch_id: String = "", val resource_id: String = "", val workspace_id: String = "", val elements: List<Any?> = emptyList())
 
 object DataConstants {
     const val REPO = "repo"

@@ -10,9 +10,6 @@ import io.vertx.core.DeploymentOptions
 import io.vertx.core.cli.Argument
 import io.vertx.core.cli.CLI
 import io.vertx.core.cli.Option
-import io.vertx.core.shareddata.LocalMap
-import io.vertx.ext.web.client.WebClient
-import io.vertx.ext.web.client.WebClientOptions
 import java.io.File
 
 
@@ -72,12 +69,17 @@ fun main(args: Array<String>) {
                     Option()
                         .setLongName("debug")
                         .setShortName("D")
-                        .setDescription("Set number of RESTVerticle instances. Default:16")
+                        .setDescription("Enable debug logging. Default: false")
+                        .setFlag(true),
+                    Option()
+                        .setLongName("requestSingleElement")
+                        .setShortName("RSE")
+                        .setDescription("Request elements one-by-one. Default: false")
                         .setFlag(true),
                     Option()
                         .setLongName(CHUNK_SIZE)
                         .setShortName("C")
-                        .setDescription("Set the size of chunks to use when crawling elements. Default -1 to disable chunks")
+                        .setDescription("Set the size of chunks to use when crawling elements. Default: -1 to disable chunks")
                         .setDefaultValue("-1")
             ))
 
@@ -105,13 +107,20 @@ fun main(args: Array<String>) {
     val revision = commandLine.getOptionValue<String>("revision")
     val chunkSize = commandLine.getOptionValue<String>(CHUNK_SIZE).toInt()
     val debug = commandLine.isFlagEnabled("debug")
+    val requestSingleElement = commandLine.isFlagEnabled("requestSingleElement")
 
     twcMap.put("debug", debug)
     if(debug) {
         println("Debug mode is enabled")
     }
-    println("Chunk size is $chunkSize")
+
+    twcMap.put("requestSingleElement", requestSingleElement)
+    if(requestSingleElement) {
+        println("Request single elements mode is enabled")
+    }
+
     twcMap.put(CHUNK_SIZE, chunkSize)
+    println("Chunk size is $chunkSize")
 
     if(instanceNum!=null){
         println("Instance number set to $instanceNum")

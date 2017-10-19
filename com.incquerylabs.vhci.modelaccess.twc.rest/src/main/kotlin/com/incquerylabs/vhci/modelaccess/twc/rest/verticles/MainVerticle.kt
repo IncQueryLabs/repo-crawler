@@ -13,6 +13,8 @@ class MainVerticle(val usr: String, val pswd: String) : AbstractVerticle() {
 
     override fun start() {
         val twcMap = vertx.sharedData().getLocalMap<Any, Any>(DataConstants.TWCMAP)
+        val requestSingleElements = twcMap["requestSingleElement"] as Boolean
+
         val eb = vertx.eventBus()
         vertx.setPeriodic(1000, {
             vertx.sharedData().getCounter(DataConstants.QUERIES, { res ->
@@ -38,7 +40,7 @@ class MainVerticle(val usr: String, val pswd: String) : AbstractVerticle() {
                                                         counter.compareAndSet(number.toLong(), 0, {})
 
                                                         if (queries != 0 && sum != 0 && queries == sum) {
-                                                            eb.send(DataConstants.TWCVERT_ADDRESS, Json.encode(Message(DataConstants.LOGOUT, JsonObject())))
+                                                            eb.send(DataConstants.TWCVERT_ADDRESS, JsonObject.mapFrom(Message(DataConstants.LOGOUT, JsonObject())))
                                                         }
                                                     }
                                                 }
@@ -61,38 +63,33 @@ class MainVerticle(val usr: String, val pswd: String) : AbstractVerticle() {
             })
 
         })
-        eb.send(DataConstants.TWCVERT_ADDRESS, Json.encode(Message(DataConstants.LOGIN, User("$usr", "$pswd"))))
+        eb.send(DataConstants.TWCVERT_ADDRESS, JsonObject.mapFrom(Message(DataConstants.LOGIN, User("$usr", "$pswd"))))
         eb.consumer<Any>(DataConstants.TWCMAIN_ADDRESS, { message ->
 
-            val json = JsonObject(message.body().toString())
-            val data = json.getJsonObject("obj")
+            val messageData = (message.body() as JsonObject).mapTo(Message::class.java)
 
-            when (json.getString("event")) {
+            when (messageData.event) {
                 DataConstants.LOGGED_IN -> {
                     println("Login complete")
 
-                    val workspaceId = twcMap.get(DataConstants.WORKSPACE_ID)
-                    val resourceId = twcMap.get(DataConstants.RESOURCE_ID)
-                    val branchId = twcMap.get(DataConstants.BRANCH_ID)
-                    val revision = twcMap.get(DataConstants.REVISION)
-                    if(workspaceId == null){
-                        eb.send(DataConstants.TWCVERT_ADDRESS, Json.encode(Message(DataConstants.GET_WORKSPACES, JsonObject())))
-                    } else if (resourceId == null){
-                        eb.send(DataConstants.TWCVERT_ADDRESS, Json.encode(Message(DataConstants.GET_RESOURCES, JsonObject().put(DataConstants.WORKSPACE_ID, workspaceId))))
-                    } else if (branchId == null) {
-                        eb.send(DataConstants.TWCVERT_ADDRESS, Json.encode(Message(DataConstants.GET_BRANCHES,
+                    val workspaceId = twcMap[DataConstants.WORKSPACE_ID]
+                    val resourceId = twcMap[DataConstants.RESOURCE_ID]
+                    val branchId = twcMap[DataConstants.BRANCH_ID]
+                    val revision = twcMap[DataConstants.REVISION]
+                    when {
+                        workspaceId == null -> eb.send(DataConstants.TWCVERT_ADDRESS, JsonObject.mapFrom(Message(DataConstants.GET_WORKSPACES, JsonObject())))
+                        resourceId == null -> eb.send(DataConstants.TWCVERT_ADDRESS, JsonObject.mapFrom(Message(DataConstants.GET_RESOURCES, JsonObject().put(DataConstants.WORKSPACE_ID, workspaceId))))
+                        branchId == null -> eb.send(DataConstants.TWCVERT_ADDRESS, JsonObject.mapFrom(Message(DataConstants.GET_BRANCHES,
                                 JsonObject()
                                         .put(DataConstants.WORKSPACE_ID, workspaceId)
                                         .put(DataConstants.RESOURCE_ID, resourceId))))
-                    } else if (revision == null) {
-                        eb.send(DataConstants.TWCVERT_ADDRESS, Json.encode(Message(DataConstants.GET_REVISIONS,
+                        revision == null -> eb.send(DataConstants.TWCVERT_ADDRESS, JsonObject.mapFrom(Message(DataConstants.GET_REVISIONS,
                                 JsonObject()
                                         .put(DataConstants.WORKSPACE_ID, workspaceId)
                                         .put(DataConstants.RESOURCE_ID, resourceId)
                                         .put(DataConstants.BRANCH_ID, branchId)
                         )))
-                    } else {
-                        vertx.eventBus().send(DataConstants.TWCVERT_ADDRESS, Json.encode(Message(DataConstants.GET_ROOT_ELEMENT_IDS,
+                        else -> vertx.eventBus().send(DataConstants.TWCVERT_ADDRESS, JsonObject.mapFrom(Message(DataConstants.GET_ROOT_ELEMENT_IDS,
                                 JsonObject()
                                         .put(DataConstants.WORKSPACE_ID, workspaceId)
                                         .put(DataConstants.RESOURCE_ID, resourceId)
@@ -101,26 +98,23 @@ class MainVerticle(val usr: String, val pswd: String) : AbstractVerticle() {
                         )))
                     }
 
-
-
-
-                    //eb.send("twc.rest.twcvert", Json.encode(Message("logout", JsonObject())))
                 }
                 DataConstants.REPO -> {
 //                    println("Received Repository")
-                    val repo = JsonObject(twcMap.get("repo") as String)
-                    repo.getJsonArray("workspaces").forEach { ws ->
-                        val id = (ws as JsonObject).getString("@id")
-                        eb.send(DataConstants.TWCVERT_ADDRESS, Json.encode(Message(DataConstants.GET_RESOURCES, JsonObject().put(DataConstants.WORKSPACE_ID, id))))
+                    val repo = JsonObject(messageData.obj as Map<String,Any>).mapTo(Repo::class.java)
+                    repo.workspaces.forEach { ws ->
+                        val id = JsonObject(ws as Map<String,Any>).getString("@id")
+                        eb.send(DataConstants.TWCVERT_ADDRESS, JsonObject.mapFrom(Message(DataConstants.GET_RESOURCES, JsonObject().put(DataConstants.WORKSPACE_ID, id))))
                     }
                 }
                 DataConstants.WORKSPACE -> {
 //                    println("Received Workspace")
-//                    println(data)
-                    val workspaceId = data.getString("id")
-                    data.getJsonArray("resources").forEach { res ->
-                        val resourceId = (res as JsonObject).getString("@id")
-                        eb.send(DataConstants.TWCVERT_ADDRESS, Json.encode(Message(DataConstants.GET_BRANCHES,
+                    val workspace = JsonObject(messageData.obj as Map<String,Any>).mapTo(Workspace::class.java)
+                    val workspaceId = workspace.id
+
+                    workspace.resources.forEach { res ->
+                        val resourceId = JsonObject(res as Map<String,Any>).getString("@id")
+                        eb.send(DataConstants.TWCVERT_ADDRESS, JsonObject.mapFrom(Message(DataConstants.GET_BRANCHES,
                                 JsonObject()
                                         .put(DataConstants.WORKSPACE_ID, workspaceId)
                                         .put(DataConstants.RESOURCE_ID, resourceId))))
@@ -128,13 +122,12 @@ class MainVerticle(val usr: String, val pswd: String) : AbstractVerticle() {
                 }
                 DataConstants.RESOURCE -> {
 //                    println("Received Resource")
-//                    println(data)
-
-                    val resourceId = data.getString("id")
-                    val workspaceId = data.getString(DataConstants.WORKSPACE_ID)
-                    data.getJsonArray("branches").forEach { branch ->
-                        val branchId = (branch as JsonObject).getString("@id")
-                        eb.send(DataConstants.TWCVERT_ADDRESS, Json.encode(Message(DataConstants.GET_REVISIONS,
+                    val resource = JsonObject(messageData.obj as Map<String,Any>).mapTo(Resource::class.java)
+                    val resourceId = resource.id
+                    val workspaceId = resource.workspace_id
+                    resource.branches.forEach { branch ->
+                        val branchId = JsonObject(branch as Map<String,Any>).getString("@id")
+                        eb.send(DataConstants.TWCVERT_ADDRESS, JsonObject.mapFrom(Message(DataConstants.GET_REVISIONS,
                                 JsonObject()
                                         .put(DataConstants.WORKSPACE_ID, workspaceId)
                                         .put(DataConstants.RESOURCE_ID, resourceId)
@@ -145,13 +138,18 @@ class MainVerticle(val usr: String, val pswd: String) : AbstractVerticle() {
                 }
                 DataConstants.BRANCH -> {
 //                    println("Received Branch")
-//                    println(data)
-                    val branchId = data.getString("id")
-                    val resourceId = data.getString(DataConstants.RESOURCE_ID)
-                    val workspaceId = data.getString(DataConstants.WORKSPACE_ID)
-                    data.getJsonArray("revisions").forEach { rev ->
+                    val branch = JsonObject(messageData.obj as Map<String,Any>).mapTo(Branch::class.java)
+                    val branchId = branch.id
+                    val resourceId = branch.resource_id
+                    val workspaceId = branch.workspace_id
+                    val inputRevision = twcMap[DataConstants.REVISION]
+                    if(inputRevision == null) {
+                        twcMap[DataConstants.REVISION] = branch.revisions.maxBy { it as Int }
+                    }
+
+                    branch.revisions.forEach { rev ->
                         val revId = (rev as Int)
-                        vertx.eventBus().send(DataConstants.TWCVERT_ADDRESS, Json.encode(Message(DataConstants.GET_ROOT_ELEMENT_IDS,
+                        vertx.eventBus().send(DataConstants.TWCVERT_ADDRESS, JsonObject.mapFrom(Message(DataConstants.GET_ROOT_ELEMENT_IDS,
                                 JsonObject()
                                         .put(DataConstants.WORKSPACE_ID, workspaceId)
                                         .put(DataConstants.RESOURCE_ID, resourceId)
@@ -163,96 +161,94 @@ class MainVerticle(val usr: String, val pswd: String) : AbstractVerticle() {
                 }
                 DataConstants.REVISION -> {
 //                    println("Received Revision")
-//                    println(data)
-
-                    val revisionId = data.getInteger("id")
-                    val branchId = data.getString(DataConstants.BRANCH_ID)
-                    val resourceId = data.getString(DataConstants.RESOURCE_ID)
-                    val workspaceId = data.getString(DataConstants.WORKSPACE_ID)
-                    val requestSingleElements = false
-                    if(requestSingleElements) {
-                        data.getJsonArray(DataConstants.ELEMENTS).forEach { element ->
-                            val elemId = element as String
-                            vertx.eventBus().send(DataConstants.TWCVERT_ADDRESS, Json.encode(Message(DataConstants.GET_ELEMENT,
+                    val revision = JsonObject(messageData.obj as Map<String,Any>).mapTo(Revision::class.java)
+                    val revisionId = revision.id
+                    val branchId = revision.branch_id
+                    val resourceId = revision.resource_id
+                    val workspaceId = revision.workspace_id
+                    val inputRevision = twcMap[DataConstants.REVISION]
+                    if(revisionId == inputRevision) {
+                        if(requestSingleElements) {
+                            revision.elements.forEach { element ->
+                                val elemId = element as String
+                                vertx.eventBus().send(DataConstants.TWCVERT_ADDRESS, JsonObject.mapFrom(Message(DataConstants.GET_ELEMENT,
+                                        JsonObject()
+                                                .put(DataConstants.WORKSPACE_ID, workspaceId)
+                                                .put(DataConstants.RESOURCE_ID, resourceId)
+                                                .put(DataConstants.BRANCH_ID, branchId)
+                                                .put(DataConstants.REVISION_ID, revisionId)
+                                                .put(DataConstants.ELEMENT_ID, elemId)
+                                )))
+                            }
+                        } else {
+                            val elementIds = revision.elements
+                            vertx.eventBus().send(DataConstants.TWCVERT_ADDRESS, JsonObject.mapFrom(Message(DataConstants.GET_ELEMENTS,
                                     JsonObject()
                                             .put(DataConstants.WORKSPACE_ID, workspaceId)
                                             .put(DataConstants.RESOURCE_ID, resourceId)
                                             .put(DataConstants.BRANCH_ID, branchId)
                                             .put(DataConstants.REVISION_ID, revisionId)
-                                            .put(DataConstants.ELEMENT_ID, elemId)
+                                            .put(DataConstants.ELEMENT_IDS, elementIds)
                             )))
                         }
-                    } else {
-                        val element_ids = data.getJsonArray(DataConstants.ELEMENTS)
-                        vertx.eventBus().send(DataConstants.TWCVERT_ADDRESS, Json.encode(Message(DataConstants.GET_ELEMENTS,
-                                JsonObject()
-                                        .put(DataConstants.WORKSPACE_ID, workspaceId)
-                                        .put(DataConstants.RESOURCE_ID, resourceId)
-                                        .put(DataConstants.BRANCH_ID, branchId)
-                                        .put(DataConstants.REVISION_ID, revisionId)
-                                        .put(DataConstants.ELEMENT_IDS, element_ids)
-                        )))
                     }
-
 
                 }
                 DataConstants.ELEMENT -> {
 //                    println("Received Element")
-//                    println(data)
+                    val element = JsonObject(messageData.obj as Map<String,Any>).mapTo(Element::class.java)
+                    val revisionId = element.revision_id
+                    val branchId = element.branch_id
+                    val resourceId = element.resource_id
+                    val workspaceId = element.workspace_id
+                    element.elements.forEach { element ->
+                        val elementId = JsonObject(element as Map<String,Any>).getString("@id")
 
-                    val revisionId = data.getInteger(DataConstants.REVISION_ID)
-                    val branchId = data.getString(DataConstants.BRANCH_ID)
-                    val resourceId = data.getString(DataConstants.RESOURCE_ID)
-                    val workspaceId = data.getString(DataConstants.WORKSPACE_ID)
-                    data.getJsonArray(DataConstants.ELEMENTS).forEach { element ->
-                        val element_id = (element as JsonObject).getString("@id")
-
-                        vertx.eventBus().send(DataConstants.TWCVERT_ADDRESS, Json.encode(Message(DataConstants.GET_ELEMENT,
+                        vertx.eventBus().send(DataConstants.TWCVERT_ADDRESS, JsonObject.mapFrom(Message(DataConstants.GET_ELEMENT,
                                 JsonObject()
                                         .put(DataConstants.WORKSPACE_ID, workspaceId)
                                         .put(DataConstants.RESOURCE_ID, resourceId)
                                         .put(DataConstants.BRANCH_ID, branchId)
                                         .put(DataConstants.REVISION_ID, revisionId)
-                                        .put(DataConstants.ELEMENT_ID, element_id)
+                                        .put(DataConstants.ELEMENT_ID, elementId)
                         )))
                     }
                 }
                 DataConstants.ELEMENTS -> {
 //                    println("Received Elements")
-//                    println(data)
-
-                    val revisionId = data.getInteger(DataConstants.REVISION_ID)
-                    val branchId = data.getString(DataConstants.BRANCH_ID)
-                    val resourceId = data.getString(DataConstants.RESOURCE_ID)
-                    val workspaceId = data.getString(DataConstants.WORKSPACE_ID)
-                    val element_ids = data.getJsonArray(DataConstants.ELEMENTS).map { element ->
-                        (element as JsonObject).getString("@id")
+                    val elements = JsonObject(messageData.obj as Map<String,Any>).mapTo(Elements::class.java)
+                    val revisionId = elements.revision_id
+                    val branchId = elements.branch_id
+                    val resourceId = elements.resource_id
+                    val workspaceId = elements.workspace_id
+                    val elementIds = elements.elements.map { element ->
+                        JsonObject.mapFrom(element).getString("@id")
                     }
-                    vertx.eventBus().send(DataConstants.TWCVERT_ADDRESS, Json.encode(Message(DataConstants.GET_ELEMENTS,
+                    vertx.eventBus().send(DataConstants.TWCVERT_ADDRESS, JsonObject.mapFrom(Message(DataConstants.GET_ELEMENTS,
                             JsonObject()
                                     .put(DataConstants.WORKSPACE_ID, workspaceId)
                                     .put(DataConstants.RESOURCE_ID, resourceId)
                                     .put(DataConstants.BRANCH_ID, branchId)
                                     .put(DataConstants.REVISION_ID, revisionId)
-                                    .put(DataConstants.ELEMENT_IDS, element_ids)
+                                    .put(DataConstants.ELEMENT_IDS, elementIds)
                     )))
                 }
                 DataConstants.ERROR -> {
                     println("\nExit")
-                    if(twcMap.get("cookies") != null) {
-                        eb.send(DataConstants.TWCVERT_ADDRESS, Json.encode(Message(DataConstants.LOGOUT, JsonObject())))
+                    if(twcMap["cookies"] != null) {
+                        eb.send(DataConstants.TWCVERT_ADDRESS, JsonObject.mapFrom(Message(DataConstants.LOGOUT, JsonObject())))
                     }
                     vertx.close()
                 }
                 DataConstants.EXIT -> {
                     println("\nExit")
-                    if(twcMap.get("cookies") != null) {
-                        eb.send(DataConstants.TWCVERT_ADDRESS, Json.encode(Message(DataConstants.LOGOUT, JsonObject())))
+                    if(twcMap["cookies"] != null) {
+                        eb.send(DataConstants.TWCVERT_ADDRESS, JsonObject.mapFrom(Message(DataConstants.LOGOUT, JsonObject())))
                     }
                     vertx.close()
                 }
 
-                else -> error("Unknown Command: ${json.getString("event")}")
+                else -> error("Unknown Command: ${messageData.event}")
             }
 
         })
