@@ -18,76 +18,84 @@ private val CHUNK_SIZE = "chunkSize"
 fun main(args: Array<String>) {
 
     val cli = CLI.create("crawler")
-            .setSummary("A REST Client to query all model element from server.")
-            .addArguments(listOf(
-                    Argument()
-                        .setArgName("username")
-                        .setIndex(0)
-                        .setDefaultValue("admin")
-                        .setDescription("TWC username."),
-                    Argument()
-                        .setArgName("password")
-                        .setIndex(1)
-                        .setDefaultValue("admin")
-                        .setDescription("TWC password.")
-            ))
-            .addOptions(listOf(
-                    Option()
-                        .setLongName("help")
-                        .setShortName("h")
-                        .setDescription("Show help site.")
-                        .setFlag(true),
-                    Option()
-                        .setLongName("server")
-                        .setShortName("S")
-                        .setDescription("Set server path."),
-                    Option()
-                        .setLongName("port")
-                        .setShortName("P")
-                        .setDescription("Set server port number."),
-                    Option()
-                        .setLongName("instanceNum")
-                        .setShortName("I")
-                        .setDescription("Set number of RESTVerticle instances. Default:16")
-                        .setDefaultValue("16"),
-                    Option()
-                        .setLongName("workspaceId")
-                        .setShortName("W")
-                        .setDescription("Select workspace to crawl"),
-                    Option()
-                        .setLongName("resourceId")
-                        .setShortName("R")
-                        .setDescription("Select resource to crawl"),
-                    Option()
-                        .setLongName("branchId")
-                        .setShortName("B")
-                        .setDescription("Select branch to crawl"),
-                    Option()
-                        .setLongName("revision")
-                        .setShortName("REV")
-                        .setDescription("Select revision to crawl"),
-                    Option()
-                        .setLongName("debug")
-                        .setShortName("D")
-                        .setDescription("Enable debug logging. Default: false")
-                        .setFlag(true),
-                    Option()
-                        .setLongName("requestSingleElement")
-                        .setShortName("RSE")
-                        .setDescription("Request elements one-by-one. Default: false")
-                        .setFlag(true),
-                    Option()
-                        .setLongName(CHUNK_SIZE)
-                        .setShortName("C")
-                        .setDescription("Set the size of chunks to use when crawling elements. Default: -1 to disable chunks")
-                        .setDefaultValue("-1")
-            ))
+        .setSummary("A REST Client to query all model element from server.")
+        .addArguments(
+            listOf(
+                Argument()
+                    .setArgName("username")
+                    .setIndex(0)
+                    .setDefaultValue("admin")
+                    .setDescription("TWC username."),
+                Argument()
+                    .setArgName("password")
+                    .setIndex(1)
+                    .setDefaultValue("admin")
+                    .setDescription("TWC password.")
+            )
+        )
+        .addOptions(
+            listOf(
+                Option()
+                    .setLongName("help")
+                    .setShortName("h")
+                    .setDescription("Show help site.")
+                    .setFlag(true),
+                Option()
+                    .setLongName("server")
+                    .setShortName("S")
+                    .setDescription("Set server path."),
+                Option()
+                    .setLongName("port")
+                    .setShortName("P")
+                    .setDescription("Set server port number."),
+                Option()
+                    .setLongName("ssl")
+                    .setShortName("ssl")
+                    .setDescription("SSL server connection. Default: false")
+                    .setFlag(true),
+                Option()
+                    .setLongName("instanceNum")
+                    .setShortName("I")
+                    .setDescription("Set number of RESTVerticle instances. Default:16")
+                    .setDefaultValue("16"),
+                Option()
+                    .setLongName("workspaceId")
+                    .setShortName("W")
+                    .setDescription("Select workspace to crawl"),
+                Option()
+                    .setLongName("resourceId")
+                    .setShortName("R")
+                    .setDescription("Select resource to crawl"),
+                Option()
+                    .setLongName("branchId")
+                    .setShortName("B")
+                    .setDescription("Select branch to crawl"),
+                Option()
+                    .setLongName("revision")
+                    .setShortName("REV")
+                    .setDescription("Select revision to crawl"),
+                Option()
+                    .setLongName("debug")
+                    .setShortName("D")
+                    .setDescription("Enable debug logging. Default: false")
+                    .setFlag(true),
+                Option()
+                    .setLongName("requestSingleElement")
+                    .setShortName("RSE")
+                    .setDescription("Request elements one-by-one. Default: false")
+                    .setFlag(true),
+                Option()
+                    .setLongName(CHUNK_SIZE)
+                    .setShortName("C")
+                    .setDescription("Set the size of chunks to use when crawling elements. Default: -1 to disable chunks")
+                    .setDefaultValue("-1")
+            )
+        )
 
 
+    val commandLine = cli.parse(args.asList(), false)
 
-    val commandLine = cli.parse(args.asList(),false)
-
-    if(commandLine.isFlagEnabled("help")) {
+    if (commandLine.isFlagEnabled("help")) {
         val builder = StringBuilder()
         cli.usage(builder)
         println(builder.toString())
@@ -96,10 +104,11 @@ fun main(args: Array<String>) {
 
     val vertx = Vertx.vertx()
     val sd = vertx.sharedData()
-    val twcMap = sd.getLocalMap<Any,Any>("twcMap")
+    val twcMap = sd.getLocalMap<Any, Any>("twcMap")
 
     val serverOpt = commandLine.getOptionValue<String>("server")
     val portOpt = commandLine.getOptionValue<String>("port")
+    val isSslEnabled = commandLine.isFlagEnabled("ssl")
     val instanceNum = commandLine.getOptionValue<String>("instanceNum").toInt()
     val workspaceId = commandLine.getOptionValue<String>("workspaceId")
     val resourceId = commandLine.getOptionValue<String>("resourceId")
@@ -109,98 +118,106 @@ fun main(args: Array<String>) {
     val debug = commandLine.isFlagEnabled("debug")
     val requestSingleElement = commandLine.isFlagEnabled("requestSingleElement")
 
-    twcMap.put("debug", debug)
-    if(debug) {
+    twcMap["debug"] = debug
+    if (debug) {
         println("Debug mode is enabled")
     }
 
-    twcMap.put("requestSingleElement", requestSingleElement)
-    if(requestSingleElement) {
+    twcMap["requestSingleElement"] = requestSingleElement
+    if (requestSingleElement) {
         println("Request single elements mode is enabled")
     }
 
-    twcMap.put(CHUNK_SIZE, chunkSize)
+    twcMap[CHUNK_SIZE] = chunkSize
     println("Chunk size is $chunkSize")
 
-    if(instanceNum!=null){
+    if (instanceNum != null) {
         println("Instance number set to $instanceNum")
-        if(instanceNum<1){
+        if (instanceNum < 1) {
             error("Number of Instances should be at least 1.")
         }
     }
-    if(workspaceId != null){
+    if (workspaceId != null) {
         println("Workspace ID set to $workspaceId")
-        twcMap.put(DataConstants.WORKSPACE_ID, workspaceId)
+        twcMap[DataConstants.WORKSPACE_ID] = workspaceId
     }
-    if(resourceId != null){
+    if (resourceId != null) {
         println("Resource ID set to $resourceId")
-        twcMap.put(DataConstants.RESOURCE_ID, resourceId)
+        twcMap[DataConstants.RESOURCE_ID] = resourceId
     }
-    if(branchId != null){
+    if (branchId != null) {
         println("Branch ID set to $branchId")
-        twcMap.put(DataConstants.BRANCH_ID, branchId)
+        twcMap[DataConstants.BRANCH_ID] = branchId
     }
-    if(revision != null){
+    if (revision != null) {
         println("Revision set to $revision")
-        twcMap.put(DataConstants.REVISION, revision.toInt())
+        twcMap[DataConstants.REVISION] = revision.toInt()
     }
 
 
-    if(serverOpt != null && portOpt!=null){
-        if(!File("server.config").exists()){
+    if (serverOpt != null && portOpt != null) {
+        if (!File("server.config").exists()) {
             File("server.config").createNewFile()
         }
 
-        File("server.config").writeText(Json.encode(Server(serverOpt,portOpt.toInt())))
-        twcMap.put("server_path",serverOpt)
-        twcMap.put("server_port",portOpt.toInt())
+        File("server.config").writeText(Json.encode(Server(serverOpt, portOpt.toInt(), isSslEnabled)))
+        twcMap["server_path"] = serverOpt
+        twcMap["server_port"] = portOpt.toInt()
+        twcMap["server_ssl"] = isSslEnabled
         println("New Server config")
 
     } else {
-        if(File("server.config").exists()) {
+        if (File("server.config").exists()) {
             val config = File("server.config").readText()
 
             if (config != "") {
                 val serverConf = JsonObject(config)
                 val serverPath = serverConf.getString("path")
                 val serverPort = serverConf.getInteger("port")
-                twcMap.put("server_path", serverPath)
-                twcMap.put("server_port", serverPort)
+                val sslEnabled = serverConf.getBoolean("ssl")
+                twcMap["server_path"] = serverPath
+                twcMap["server_port"] = serverPort
+                twcMap["server_ssl"] = sslEnabled
             } else {
-                error("Server config is empty.\n" +
-                        "Please set Server Path and Port.\n" +
-                        "(Check usage with -h (--help) cli option)")
+                error(
+                    "Server config is empty.\n" +
+                            "Please set Server Path and Port.\n" +
+                            "(Check usage with -h (--help) cli option)"
+                )
             }
         } else {
-            error("No server config found.\n" +
-                    "Please set Server Path and Port.\n" +
-                    "(Check usage with -h (--help) cli option)")
+            error(
+                "No server config found.\n" +
+                        "Please set Server Path and Port.\n" +
+                        "(Check usage with -h (--help) cli option)"
+            )
         }
     }
-    println("Server config: ${twcMap.get("server_path")}:${twcMap.get("server_port")}")
+    println("Server config: ${twcMap["server_path"]}:${twcMap["server_port"]} (ssl: ${twcMap["server_ssl"]})")
 
     val restVerticle = RESTVerticle()
 
     var options = DeploymentOptions().setWorker(true).setHa(true).setInstances(instanceNum).setWorkerPoolSize(32)
 
-    twcMap.put("flag",0)
-    vertx.deployVerticle(restVerticle.javaClass.name,options,{ deploy ->
+    twcMap["flag"] = 0
+    vertx.deployVerticle(restVerticle.javaClass.name, options) { deploy ->
         if (deploy.failed()) {
             error("Deploy failed: ${deploy.cause().message}")
         } else {
 
             val usr = commandLine.getArgumentValue<String>("username")
             val pswd = commandLine.getArgumentValue<String>("password")
-            twcMap.put("credential","Basic ${java.util.Base64.getEncoder().encodeToString("${usr}:${pswd}".toByteArray())}")
-            twcMap.put("username",usr)
+            twcMap["credential"] =
+                "Basic ${java.util.Base64.getEncoder().encodeToString("${usr}:${pswd}".toByteArray())}"
+            twcMap["username"] = usr
 
-            vertx.deployVerticle(MainVerticle(usr,pswd),{deploy->
-                if(deploy.failed()){
+            vertx.deployVerticle(MainVerticle(usr, pswd)) { deploy ->
+                if (deploy.failed()) {
                     error("Deploy failed: ${deploy.cause().message}\n${deploy.cause().printStackTrace()}")
                 }
-            })
+            }
         }
-    })
+    }
 
 }
 
