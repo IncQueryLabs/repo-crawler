@@ -24,7 +24,7 @@ compileTestKotlin {
 }
 
 vertx {
-    mainVerticle = 'com.incquerylabs.vhci.modelaccess.twc.rest.verticles.MainVerticle'
+    launcher = 'com.incquerylabs.vhci.modelaccess.twc.rest.CrawlerKt'
 }
 
 wrapper {

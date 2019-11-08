@@ -19,20 +19,6 @@ fun main(args: Array<String>) {
 
     val cli = CLI.create("crawler")
         .setSummary("A REST Client to query all model element from server.")
-        .addArguments(
-            listOf(
-                Argument()
-                    .setArgName("username")
-                    .setIndex(0)
-                    .setDefaultValue("admin")
-                    .setDescription("TWC username."),
-                Argument()
-                    .setArgName("password")
-                    .setIndex(1)
-                    .setDefaultValue("admin")
-                    .setDescription("TWC password.")
-            )
-        )
         .addOptions(
             listOf(
                 Option()
@@ -40,6 +26,16 @@ fun main(args: Array<String>) {
                     .setShortName("h")
                     .setDescription("Show help site.")
                     .setFlag(true),
+                Option()
+                    .setLongName("username")
+                    .setShortName("u")
+                    .setDefaultValue("admin")
+                    .setDescription("TWC username."),
+                Option()
+                    .setLongName("password")
+                    .setShortName("pw")
+                    .setDefaultValue("admin")
+                    .setDescription("TWC password."),
                 Option()
                     .setLongName("server")
                     .setShortName("S")
@@ -106,6 +102,8 @@ fun main(args: Array<String>) {
     val sd = vertx.sharedData()
     val twcMap = sd.getLocalMap<Any, Any>("twcMap")
 
+    val usr = commandLine.getOptionValue<String>("username")
+    val pswd = commandLine.getOptionValue<String>("password")
     val serverOpt = commandLine.getOptionValue<String>("server")
     val portOpt = commandLine.getOptionValue<String>("port")
     val isSslEnabled = commandLine.isFlagEnabled("ssl")
@@ -205,8 +203,6 @@ fun main(args: Array<String>) {
             error("Deploy failed: ${deploy.cause().message}")
         } else {
 
-            val usr = commandLine.getArgumentValue<String>("username")
-            val pswd = commandLine.getArgumentValue<String>("password")
             twcMap["credential"] =
                 "Basic ${java.util.Base64.getEncoder().encodeToString("${usr}:${pswd}".toByteArray())}"
             twcMap["username"] = usr
