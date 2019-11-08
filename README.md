@@ -13,11 +13,14 @@ The easiest way to set up the environment is to:
 
 1. `Run -> Run... -> com.incquerylabs.vhci.modelaccess.twc.rest.Crawler.kt` (set arguments in Configuration)
 
+### Gradle`
+
+1. `./gradlew run --args='<args>'` with arguments (see below)
+
 ### Application
 
-1. `gradle shadowJar` or download from GitHub releases
+1. `./gradlew shadowJar` or download from GitHub releases
 1. `java -jar build/libs/vhci.modelaccess.twc.rest-1.0-SNAPSHOT-all.jar <args>` with arguments (see below)
-
 
 ## Example arguments
 

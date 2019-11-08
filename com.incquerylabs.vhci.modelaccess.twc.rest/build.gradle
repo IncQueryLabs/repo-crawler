@@ -23,6 +23,10 @@ compileTestKotlin {
     kotlinOptions.jvmTarget = '1.8'
 }
 
+application {
+    mainClassName = 'com.incquerylabs.vhci.modelaccess.twc.rest.CrawlerKt'
+}
+
 vertx {
     launcher = 'com.incquerylabs.vhci.modelaccess.twc.rest.CrawlerKt'
 }
