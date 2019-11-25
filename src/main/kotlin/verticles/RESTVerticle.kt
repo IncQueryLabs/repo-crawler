@@ -308,6 +308,7 @@ class RESTVerticle() : AbstractVerticle() {
     }
 
     private fun getRevisions(client: WebClient, twcMap: LocalMap<Any, Any>, obj: JsonObject) {
+        queryPrepared(1)
         val workspaceId = obj.getString(WORKSPACE_ID)
         val resourceId = obj.getString(RESOURCE_ID)
         val branchId = obj.getString(BRANCH_ID)
@@ -321,7 +322,7 @@ class RESTVerticle() : AbstractVerticle() {
             .send { ar ->
                 if (ar.succeeded()) {
                     if (ar.result().statusCode() == 200) {
-
+                        queryCompleted(1)
                         val data = ar.result().bodyAsJsonArray()
                         val branch = Branch(
                             branchId,

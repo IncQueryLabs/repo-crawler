@@ -9,6 +9,13 @@
 
 Running the jar without arguments prints out the usage instructions.
 
+- Running the crawler without workspace, resource, branch and revision will result in crawling the repository structure of the given scope
+- Running the crawler with workspace, resource, branch and revision will result in crawling the model content of the given revision
+
+### Repository structure of OpenSE Cookbook workspace on twc.openmbee.org
+
+`-S twc.openmbee.org -P 8111 -ssl -W 9c368adc-10cc-45d9-bec6-27aedc80e68b -C 2000 -u openmbeeguest -pw guest`
+
 ### OpenSE Cookbook model on twc.openmbee.org
 
 `-S twc.openmbee.org -P 8111 -ssl -W 9c368adc-10cc-45d9-bec6-27aedc80e68b -R c6bede89-cd5e-487b-aca8-a4f384370759 -B 29110c0f-bdc1-4294-ae24-9fd608629cac -REV 350 -C 2000 -u openmbeeguest -pw guest`

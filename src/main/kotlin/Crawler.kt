@@ -11,8 +11,7 @@ import io.vertx.core.json.Json
 import io.vertx.core.json.JsonObject
 import java.io.File
 
-
-private val CHUNK_SIZE = "chunkSize"
+const val CHUNK_SIZE = "chunkSize"
 
 fun main(args: Array<String>) {
 
@@ -128,11 +127,9 @@ fun main(args: Array<String>) {
     twcMap[CHUNK_SIZE] = chunkSize
     println("Chunk size is $chunkSize")
 
-    if (instanceNum != null) {
-        println("Instance number set to $instanceNum")
-        if (instanceNum < 1) {
-            error("Number of Instances should be at least 1.")
-        }
+    println("Instance number set to $instanceNum")
+    if (instanceNum < 1) {
+        error("Number of Instances should be at least 1.")
     }
     if (workspaceId != null) {
         println("Workspace ID set to $workspaceId")
@@ -200,7 +197,7 @@ fun main(args: Array<String>) {
 
     val restVerticle = RESTVerticle()
 
-    var options = DeploymentOptions().setWorker(true).setHa(true).setInstances(instanceNum).setWorkerPoolSize(32)
+    val options = DeploymentOptions().setWorker(true).setHa(true).setInstances(instanceNum).setWorkerPoolSize(32)
 
     twcMap["flag"] = 0
     vertx.deployVerticle(restVerticle.javaClass.name, options) { deploy ->
@@ -217,9 +214,9 @@ fun main(args: Array<String>) {
                     usr,
                     pswd
                 )
-            ) { deploy ->
-                if (deploy.failed()) {
-                    error("Deploy failed: ${deploy.cause().message}\n${deploy.cause().printStackTrace()}")
+            ) {
+                if (it.failed()) {
+                    error("Deploy failed: ${it.cause().message}\n${it.cause().printStackTrace()}")
                 }
             }
         }

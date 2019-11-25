@@ -16,29 +16,29 @@ class MainVerticle(val usr: String, val pswd: String) : AbstractVerticle() {
 
         val eb = vertx.eventBus()
         vertx.setPeriodic(1000) {
-            vertx.sharedData().getCounter(QUERIES) { res ->
-                if (res.succeeded()) {
-                    val counter = res.result()
-                    counter.get { res ->
-                        queries = res.result().toInt()
+            vertx.sharedData().getCounter(QUERIES) { queriesR ->
+                if (queriesR.succeeded()) {
+                    val queriesC = queriesR.result()
+                    queriesC.get { queriesV ->
+                        this.queries = queriesV.result().toInt()
 
-                        vertx.sharedData().getCounter("sum") { res ->
-                            if (res.succeeded()) {
-                                val counter = res.result()
-                                counter.get { get ->
-                                    if (get.succeeded()) {
-                                        sum = get.result().toInt()
+                        vertx.sharedData().getCounter("sum") { sumR ->
+                            if (sumR.succeeded()) {
+                                val sumC = sumR.result()
+                                sumC.get { sumV ->
+                                    if (sumV.succeeded()) {
+                                        this.sum = sumV.result().toInt()
 
-                                        vertx.sharedData().getCounter("number") { res ->
-                                            if (res.succeeded()) {
-                                                val counter = res.result()
-                                                counter.get { get ->
-                                                    if (get.succeeded()) {
-                                                        number = get.result().toInt()
-                                                        println("Total: ${queries}/${sum}/${++s} query/response/sec | Now: $number elem | AvgSpeed: ${sum / (s)} elem/sec")
-                                                        counter.compareAndSet(number.toLong(), 0, {})
+                                        vertx.sharedData().getCounter("number") { numR ->
+                                            if (numR.succeeded()) {
+                                                val numC = numR.result()
+                                                numC.get { numV ->
+                                                    if (numV.succeeded()) {
+                                                        number = numV.result().toInt()
+                                                        println("Total: ${this.queries}/${this.sum}/${++s} query/response/sec | Now: $number elem | AvgSpeed: ${this.sum / (s)} elem/sec")
+                                                        numC.compareAndSet(number.toLong(), 0, {})
 
-                                                        if (queries != 0 && sum != 0 && queries == sum) {
+                                                        if (this.queries != 0 && this.sum != 0 && this.queries == this.sum) {
                                                             eb.send(
                                                                 TWCVERT_ADDRESS,
                                                                 JsonObject.mapFrom(
@@ -52,13 +52,13 @@ class MainVerticle(val usr: String, val pswd: String) : AbstractVerticle() {
                                                     }
                                                 }
                                             } else {
-                                                error("Counter: queries not available.")
+                                                error("Counter: queriesR not available.")
                                             }
                                         }
                                     }
                                 }
                             } else {
-                                error("Counter: queries not available.")
+                                error("Counter: queriesR not available.")
                             }
                         }
 
@@ -175,8 +175,8 @@ class MainVerticle(val usr: String, val pswd: String) : AbstractVerticle() {
 
                 }
                 REPO -> {
-                    //                    println("Received Repository")
                     val repo = JsonObject(messageData.obj as Map<String, Any>).mapTo(Repo::class.java)
+                    println("Received workspace list $repo")
                     repo.workspaces.forEach { ws ->
                         val id = JsonObject(ws as Map<String, Any>).getString("@id")
                         eb.send(
@@ -194,8 +194,8 @@ class MainVerticle(val usr: String, val pswd: String) : AbstractVerticle() {
                     }
                 }
                 WORKSPACE -> {
-                    //                    println("Received Workspace")
                     val workspace = JsonObject(messageData.obj as Map<String, Any>).mapTo(Workspace::class.java)
+                    println("Received workspace content for $workspace")
                     val workspaceId = workspace.id
 
                     workspace.resources.forEach { res ->
@@ -219,8 +219,8 @@ class MainVerticle(val usr: String, val pswd: String) : AbstractVerticle() {
                     }
                 }
                 RESOURCE -> {
-                    //                    println("Received Resource")
                     val resource = JsonObject(messageData.obj as Map<String, Any>).mapTo(Resource::class.java)
+                    println("Received resource content for $resource")
                     val resourceId = resource.id
                     val workspaceId = resource.workspace_id
                     resource.branches.forEach { branch ->
@@ -249,48 +249,47 @@ class MainVerticle(val usr: String, val pswd: String) : AbstractVerticle() {
 
                 }
                 BRANCH -> {
-                    //                    println("Received Branch")
                     val branch = JsonObject(messageData.obj as Map<String, Any>).mapTo(Branch::class.java)
+                    println("Received branch content for $branch")
                     val branchId = branch.id
                     val resourceId = branch.resource_id
                     val workspaceId = branch.workspace_id
-                    val inputRevision = twcMap[REVISION]
-                    if (inputRevision == null) {
-                        twcMap[REVISION] = branch.revisions.maxBy { it as Int }
-                    }
 
                     branch.revisions.forEach { rev ->
                         val revId = (rev as Int)
-                        vertx.eventBus().send(
-                            TWCVERT_ADDRESS, JsonObject.mapFrom(
-                                Message(
-                                    GET_ROOT_ELEMENT_IDS,
-                                    JsonObject()
-                                        .put(
-                                            WORKSPACE_ID,
-                                            workspaceId
-                                        )
-                                        .put(
-                                            RESOURCE_ID,
-                                            resourceId
-                                        )
-                                        .put(
-                                            BRANCH_ID,
-                                            branchId
-                                        )
-                                        .put(
-                                            REVISION_ID,
-                                            revId
-                                        )
+                        val inputRevision = twcMap[REVISION]
+                        if (revId == inputRevision) {
+                            vertx.eventBus().send(
+                                TWCVERT_ADDRESS, JsonObject.mapFrom(
+                                    Message(
+                                        GET_ROOT_ELEMENT_IDS,
+                                        JsonObject()
+                                            .put(
+                                                WORKSPACE_ID,
+                                                workspaceId
+                                            )
+                                            .put(
+                                                RESOURCE_ID,
+                                                resourceId
+                                            )
+                                            .put(
+                                                BRANCH_ID,
+                                                branchId
+                                            )
+                                            .put(
+                                                REVISION_ID,
+                                                revId
+                                            )
+                                    )
                                 )
                             )
-                        )
+                        }
                     }
 
                 }
                 REVISION -> {
-                    //                    println("Received Revision")
                     val revision = JsonObject(messageData.obj as Map<String, Any>).mapTo(Revision::class.java)
+                    println("Received revision content for $revision")
                     val revisionId = revision.id
                     val branchId = revision.branch_id
                     val resourceId = revision.resource_id
@@ -365,12 +364,12 @@ class MainVerticle(val usr: String, val pswd: String) : AbstractVerticle() {
                 }
                 ELEMENT -> {
                     //                    println("Received Element")
-                    val element = JsonObject(messageData.obj as Map<String, Any>).mapTo(Element::class.java)
-                    val revisionId = element.revision_id
-                    val branchId = element.branch_id
-                    val resourceId = element.resource_id
-                    val workspaceId = element.workspace_id
-                    element.elements.forEach { element ->
+                    val elementRequest = JsonObject(messageData.obj as Map<String, Any>).mapTo(Element::class.java)
+                    val revisionId = elementRequest.revision_id
+                    val branchId = elementRequest.branch_id
+                    val resourceId = elementRequest.resource_id
+                    val workspaceId = elementRequest.workspace_id
+                    elementRequest.elements.forEach { element ->
                         val elementId = JsonObject(element as Map<String, Any>).getString("@id")
 
                         vertx.eventBus().send(
