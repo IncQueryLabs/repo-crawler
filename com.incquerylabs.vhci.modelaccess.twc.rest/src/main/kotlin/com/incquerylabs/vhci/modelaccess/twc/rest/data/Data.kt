@@ -70,4 +70,7 @@ object DataConstants {
     const val LOGIN = "login"
     const val LOGGED_IN = "logged_in"
     const val LOGOUT = "logout"
+
+    const val USER = "user_cookie"
+    const val SESSION = "session_cookie"
 }

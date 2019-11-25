@@ -52,8 +52,8 @@ fun main(args: Array<String>) {
                 Option()
                     .setLongName("instanceNum")
                     .setShortName("I")
-                    .setDescription("Set number of RESTVerticle instances. Default:16")
-                    .setDefaultValue("16"),
+                    .setDescription("Set number of RESTVerticle instances. Default: 4")
+                    .setDefaultValue("4"),
                 Option()
                     .setLongName("workspaceId")
                     .setShortName("W")
@@ -83,8 +83,8 @@ fun main(args: Array<String>) {
                 Option()
                     .setLongName(CHUNK_SIZE)
                     .setShortName("C")
-                    .setDescription("Set the size of chunks to use when crawling elements. Default: -1 to disable chunks")
-                    .setDefaultValue("-1")
+                    .setDescription("Set the size of chunks to use when crawling elements (-1 to disable chunks). Default: 2000")
+                    .setDefaultValue("2000")
             )
         )
 

@@ -16,6 +16,7 @@ import io.vertx.core.json.JsonObject
 import io.vertx.core.shareddata.LocalMap
 import io.vertx.ext.web.client.WebClient
 import io.vertx.ext.web.client.WebClientOptions
+import java.io.File
 
 
 class RESTVerticle() : AbstractVerticle() {
@@ -111,35 +112,28 @@ class RESTVerticle() : AbstractVerticle() {
         val branchId = obj.getString(DataConstants.BRANCH_ID)
         val revisionId = obj.getInteger(DataConstants.REVISION_ID)
         val elementIds = obj.getJsonArray(DataConstants.ELEMENT_IDS)
-        vertx.sharedData().getCounter(DataConstants.QUERIES) { res ->
-            if (res.succeeded()) {
-                val counter = res.result()
-                counter.addAndGet(elementIds.size().toLong(), {})
-            } else {
-                error("Counter: queries not available.")
-            }
-        }
+        val elementSize = elementIds.size().toLong()
+        queryPrepared(elementSize)
 
         client.post(
             port, serverPath,
             "/osmc/workspaces/$workspaceId/resources/$resourceId/branches/$branchId/revisions/$revisionId/elements"
         )
             .putHeader("content-type", "text/plain")
-            .putHeader("Authorization", "${twcMap["credential"]}")
-            .putHeader("Cookie", "${twcMap["user_cookie"]}")
-            .putHeader("Cookie", "${twcMap["session_cookie"]}")
+            .putHeader("Cookie", "${twcMap[DataConstants.USER]}")
+            .putHeader("Cookie", "${twcMap[DataConstants.SESSION]}")
             .sendBuffer(Buffer.buffer(elementIds.joinToString(","))) { ar ->
                 if (ar.succeeded()) {
                     if (ar.result().statusCode() == 200) {
 
                         val data = ar.result().bodyAsJsonObject()
 
+                        queryCompleted(elementSize)
                         val containedElements = elementIds.flatMap { elementId ->
                             val element = data.getJsonObject(elementId as String).getJsonArray("data")
-                            saveElement(elementId, element)
                             element.getJsonObject(0).getJsonArray("ldp:contains")
                         }
-                        if (!containedElements.isEmpty()) {
+                        if (containedElements.isNotEmpty()) {
                             if (chunkSize > 1) {
                                 containedElements.withIndex().groupBy {
                                     it.index / chunkSize
@@ -172,19 +166,42 @@ class RESTVerticle() : AbstractVerticle() {
             }
     }
 
+    private fun queryPrepared(elementSize: Long) {
+        vertx.sharedData().getCounter(DataConstants.QUERIES) { res ->
+            if (res.succeeded()) {
+                val counter = res.result()
+                counter.addAndGet(elementSize) {}
+            } else {
+                error("Counter: queries not available.")
+            }
+        }
+    }
+
+    private fun queryCompleted(elementSize: Long) {
+        vertx.sharedData().getCounter("sum") { res ->
+            if (res.succeeded()) {
+                val counter = res.result()
+                counter.addAndGet(elementSize) {}
+            } else {
+                error("Counter: sum not available.")
+            }
+        }
+        vertx.sharedData().getCounter("number") { res ->
+            if (res.succeeded()) {
+                val counter = res.result()
+                counter.addAndGet(elementSize) {}
+            } else {
+                error("Counter: number not available.")
+            }
+        }
+    }
+
     private fun getElement(client: WebClient, twcMap: LocalMap<Any, Any>, obj: JsonObject) {
         getRootElement(client, twcMap, obj)
     }
 
     private fun getRootElement(client: WebClient, twcMap: LocalMap<Any, Any>, obj: JsonObject) {
-        vertx.sharedData().getCounter(DataConstants.QUERIES) { res ->
-            if (res.succeeded()) {
-                val counter = res.result()
-                counter.incrementAndGet {}
-            } else {
-                error("Counter: queries not available.")
-            }
-        }
+        queryPrepared(1)
         val workspaceId = obj.getString(DataConstants.WORKSPACE_ID)
         val resourceId = obj.getString(DataConstants.RESOURCE_ID)
         val branchId = obj.getString(DataConstants.BRANCH_ID)
@@ -195,16 +212,15 @@ class RESTVerticle() : AbstractVerticle() {
             "/osmc/workspaces/$workspaceId/resources/$resourceId/branches/$branchId/elements/$elementId"
         )
             .putHeader("content-type", "application/ld+json")
-            .putHeader("Authorization", "${twcMap["credential"]}")
-            .putHeader("Cookie", "${twcMap["user_cookie"]}")
-            .putHeader("Cookie", "${twcMap["session_cookie"]}")
+            .putHeader("Cookie", "${twcMap[DataConstants.USER]}")
+            .putHeader("Cookie", "${twcMap[DataConstants.SESSION]}")
             .sendJson(JsonObject()) { ar ->
                 if (ar.succeeded()) {
                     if (ar.result().statusCode() == 200) {
 
                         val data = ar.result().bodyAsJsonArray()
 
-                        saveElement(elementId, data)
+                        queryCompleted(1)
 
                         val element = Element(
                             elementId, revisionId, branchId, resourceId, workspaceId,
@@ -228,40 +244,6 @@ class RESTVerticle() : AbstractVerticle() {
             }
     }
 
-    private fun saveElement(elementId: String, data: JsonArray) {
-        vertx.sharedData().getCounter("sum") { res ->
-            if (res.succeeded()) {
-                val counter = res.result()
-                counter.incrementAndGet {}
-            } else {
-                error("Counter: queries not available.")
-            }
-        }
-        vertx.sharedData().getCounter("number") { res ->
-            if (res.succeeded()) {
-                val counter = res.result()
-                counter.incrementAndGet {}
-            } else {
-                error("Counter: queries not available.")
-            }
-        }
-//        vertx.executeBlocking<Any>({ future ->
-//            val dir = File("./elements")
-//            val file = File("./elements/${elementId}.json")
-//            if(!dir.isDirectory || !dir.exists()){
-//                dir.mkdir()
-//            }
-//            if(!file.exists()){
-//                file.createNewFile()
-//            }
-//            file.writeText(data.toString())
-//
-//            future.complete("${elementId}.json")
-//        },{ res ->
-//            println("${res.result()} saved")
-//        })
-    }
-
     private fun getRootElementIds(client: WebClient, twcMap: LocalMap<Any, Any>, obj: JsonObject) {
         val workspaceId = obj.getString(DataConstants.WORKSPACE_ID)
         val resourceId = obj.getString(DataConstants.RESOURCE_ID)
@@ -272,9 +254,8 @@ class RESTVerticle() : AbstractVerticle() {
             "/osmc/workspaces/${workspaceId}/resources/${resourceId}/branches/${branchId}/revisions/${revId}"
         )
             .putHeader("content-type", "application/ld+json")
-            .putHeader("Authorization", "${twcMap["credential"]}")
-            .putHeader("Cookie", "${twcMap["user_cookie"]}")
-            .putHeader("Cookie", "${twcMap["session_cookie"]}")
+            .putHeader("Cookie", "${twcMap[DataConstants.USER]}")
+            .putHeader("Cookie", "${twcMap[DataConstants.SESSION]}")
             .send { ar ->
                 if (ar.succeeded()) {
                     if (ar.result().statusCode() == 200) {
@@ -312,9 +293,8 @@ class RESTVerticle() : AbstractVerticle() {
             "/osmc/workspaces/${workspaceId}/resources/${resourceId}/branches/${branchId}/revisions"
         )
             .putHeader("content-type", "application/ld+json")
-            .putHeader("Authorization", "${twcMap["credential"]}")
-            .putHeader("Cookie", "${twcMap["user_cookie"]}")
-            .putHeader("Cookie", "${twcMap["session_cookie"]}")
+            .putHeader("Cookie", "${twcMap[DataConstants.USER]}")
+            .putHeader("Cookie", "${twcMap[DataConstants.SESSION]}")
             .send { ar ->
                 if (ar.succeeded()) {
                     if (ar.result().statusCode() == 200) {
@@ -349,9 +329,8 @@ class RESTVerticle() : AbstractVerticle() {
         val resourceId = obj.getString(DataConstants.RESOURCE_ID)
         client.get(port, serverPath, "/osmc/workspaces/${workspaceId}/resources/${resourceId}/branches")
             .putHeader("content-type", "application/ld+json")
-            .putHeader("Authorization", "${twcMap["credential"]}")
-            .putHeader("Cookie", "${twcMap["user_cookie"]}")
-            .putHeader("Cookie", "${twcMap["session_cookie"]}")
+            .putHeader("Cookie", "${twcMap[DataConstants.USER]}")
+            .putHeader("Cookie", "${twcMap[DataConstants.SESSION]}")
             .send { ar ->
                 if (ar.succeeded()) {
                     if (ar.result().statusCode() == 200) {
@@ -380,9 +359,8 @@ class RESTVerticle() : AbstractVerticle() {
         val workspaceId = obj.getString(DataConstants.WORKSPACE_ID)
         client.get(port, serverPath, "/osmc/workspaces/${workspaceId}/resources")
             .putHeader("content-type", "application/ld+json")
-            .putHeader("Authorization", "${twcMap["credential"]}")
-            .putHeader("Cookie", "${twcMap["user_cookie"]}")
-            .putHeader("Cookie", "${twcMap["session_cookie"]}")
+            .putHeader("Cookie", "${twcMap[DataConstants.USER]}")
+            .putHeader("Cookie", "${twcMap[DataConstants.SESSION]}")
             .send { ar ->
                 if (ar.succeeded()) {
                     if (ar.result().statusCode() == 200) {
@@ -417,8 +395,16 @@ class RESTVerticle() : AbstractVerticle() {
                     if (ar.result().statusCode() == 204) {
                         val userCookie = ar.result().cookies()[0].split(';')[0]
                         val sessionCookie = ar.result().cookies()[1].split(';')[0]
-                        twcMap["user_cookie"] = userCookie
-                        twcMap["session_cookie"] = sessionCookie
+                        twcMap[DataConstants.USER] = userCookie
+                        twcMap[DataConstants.SESSION] = sessionCookie
+                        val currentTimeMillis = System.currentTimeMillis()
+                        val sessionFile = "session_details_$currentTimeMillis"
+                        twcMap["sessionFile"] = sessionFile
+                        File(sessionFile).writeText("""
+                            user: $userCookie
+                            session: $sessionCookie
+                        """.trimIndent())
+                        println("Session details written to: $sessionFile")
                         vertx.eventBus().send(
                             DataConstants.TWCMAIN_ADDRESS,
                             JsonObject.mapFrom(Message(DataConstants.LOGGED_IN, JsonObject()))
@@ -439,14 +425,15 @@ class RESTVerticle() : AbstractVerticle() {
     private fun logout(client: WebClient, twcMap: LocalMap<Any, Any>) {
         client.get(port, serverPath, "/osmc/logout")
             .putHeader("content-type", "application/ld+json")
-            .putHeader("Authorization", "${twcMap["credential"]}")
-            .putHeader("Cookie", "${twcMap["user_cookie"]}")
-            .putHeader("Cookie", "${twcMap["session_cookie"]}")
+            .putHeader("Cookie", "${twcMap[DataConstants.USER]}")
+            .putHeader("Cookie", "${twcMap[DataConstants.SESSION]}")
             .send { ar ->
                 if (ar.succeeded()) {
                     if (ar.result().statusCode() == 204) {
-                        //twcMap.put("cookies",ar.result().cookies().toString())
                         twcMap.remove("cookies")
+                        val sessionFile = twcMap["sessionFile"] as String
+                        println("Logout successful, deleting session file $sessionFile")
+                        File(sessionFile).deleteOnExit()
                         vertx.eventBus().send(
                             DataConstants.TWCMAIN_ADDRESS,
                             JsonObject.mapFrom(Message(DataConstants.EXIT, JsonObject()))
@@ -464,13 +451,11 @@ class RESTVerticle() : AbstractVerticle() {
             }
     }
 
-    //TODO
     private fun getWorkspaces(client: WebClient, twcMap: LocalMap<Any, Any>) {
         client.get(port, serverPath, "/osmc/workspaces")
             .putHeader("content-type", "application/ld+json")
-            .putHeader("Authorization", "${twcMap["credential"]}")
-            .putHeader("Cookie", "${twcMap["user_cookie"]}")
-            .putHeader("Cookie", "${twcMap["session_cookie"]}")
+            .putHeader("Cookie", "${twcMap[DataConstants.USER]}")
+            .putHeader("Cookie", "${twcMap[DataConstants.SESSION]}")
             .timeout(2000)
             .send { ar ->
                 if (ar.succeeded()) {

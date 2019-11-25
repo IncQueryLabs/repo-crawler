@@ -86,7 +86,7 @@ class MainVerticle(val usr: String, val pswd: String) : AbstractVerticle() {
 
             when (messageData.event) {
                 DataConstants.LOGGED_IN -> {
-                    println("Login complete")
+                    println("Login complete (user: ${twcMap[DataConstants.USER]}, session:  ${twcMap[DataConstants.SESSION]})")
 
                     val workspaceId = twcMap[DataConstants.WORKSPACE_ID]
                     val resourceId = twcMap[DataConstants.RESOURCE_ID]
