@@ -1,15 +1,14 @@
-package com.incquerylabs.vhci.modelaccess.twc.rest
+package com.incquerylabs.twc.repo.crawler
 
-import com.incquerylabs.vhci.modelaccess.twc.rest.data.*
-import io.vertx.core.Vertx
-import io.vertx.core.json.Json
-import io.vertx.core.json.JsonObject
-import com.incquerylabs.vhci.modelaccess.twc.rest.verticles.MainVerticle
-import com.incquerylabs.vhci.modelaccess.twc.rest.verticles.RESTVerticle
+import com.incquerylabs.twc.repo.crawler.data.*
+import com.incquerylabs.twc.repo.crawler.verticles.MainVerticle
+import com.incquerylabs.twc.repo.crawler.verticles.RESTVerticle
 import io.vertx.core.DeploymentOptions
-import io.vertx.core.cli.Argument
+import io.vertx.core.Vertx
 import io.vertx.core.cli.CLI
 import io.vertx.core.cli.Option
+import io.vertx.core.json.Json
+import io.vertx.core.json.JsonObject
 import java.io.File
 
 
@@ -137,19 +136,19 @@ fun main(args: Array<String>) {
     }
     if (workspaceId != null) {
         println("Workspace ID set to $workspaceId")
-        twcMap[DataConstants.WORKSPACE_ID] = workspaceId
+        twcMap[WORKSPACE_ID] = workspaceId
     }
     if (resourceId != null) {
         println("Resource ID set to $resourceId")
-        twcMap[DataConstants.RESOURCE_ID] = resourceId
+        twcMap[RESOURCE_ID] = resourceId
     }
     if (branchId != null) {
         println("Branch ID set to $branchId")
-        twcMap[DataConstants.BRANCH_ID] = branchId
+        twcMap[BRANCH_ID] = branchId
     }
     if (revision != null) {
         println("Revision set to $revision")
-        twcMap[DataConstants.REVISION] = revision.toInt()
+        twcMap[REVISION] = revision.toInt()
     }
 
 
@@ -158,7 +157,13 @@ fun main(args: Array<String>) {
             File("server.config").createNewFile()
         }
 
-        File("server.config").writeText(Json.encode(Server(serverOpt, portOpt.toInt(), isSslEnabled)))
+        File("server.config").writeText(Json.encode(
+            Server(
+                serverOpt,
+                portOpt.toInt(),
+                isSslEnabled
+            )
+        ))
         twcMap["server_path"] = serverOpt
         twcMap["server_port"] = portOpt.toInt()
         twcMap["server_ssl"] = isSslEnabled
@@ -207,7 +212,12 @@ fun main(args: Array<String>) {
                 "Basic ${java.util.Base64.getEncoder().encodeToString("${usr}:${pswd}".toByteArray())}"
             twcMap["username"] = usr
 
-            vertx.deployVerticle(MainVerticle(usr, pswd)) { deploy ->
+            vertx.deployVerticle(
+                MainVerticle(
+                    usr,
+                    pswd
+                )
+            ) { deploy ->
                 if (deploy.failed()) {
                     error("Deploy failed: ${deploy.cause().message}\n${deploy.cause().printStackTrace()}")
                 }

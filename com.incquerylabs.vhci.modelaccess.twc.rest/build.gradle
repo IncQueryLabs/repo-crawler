@@ -24,11 +24,11 @@ compileTestKotlin {
 }
 
 application {
-    mainClassName = 'com.incquerylabs.vhci.modelaccess.twc.rest.CrawlerKt'
+    mainClassName = 'com.incquerylabs.twc.repo.crawler.CrawlerKt'
 }
 
 vertx {
-    launcher = 'com.incquerylabs.vhci.modelaccess.twc.rest.CrawlerKt'
+    launcher = 'com.incquerylabs.twc.repo.crawler.CrawlerKt'
 }
 
 wrapper {

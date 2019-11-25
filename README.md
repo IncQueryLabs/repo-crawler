@@ -2,8 +2,8 @@
 
 ## Run the crawler
 
-1. Download `vhci.modelaccess.twc.rest-<version>-all.jar` from [GitHub releases](https://github.com/IncQueryLabs/repo-crawler/releases)
-1. `java -jar vhci.modelaccess.twc.rest-<version>-all.jar <args>` with arguments (see below)
+1. Download `twc.repo-crawler-<version>-all.jar` from [GitHub releases](https://github.com/IncQueryLabs/repo-crawler/releases)
+1. `java -jar twc.repo-crawler-<version>-all.jar <args>` with arguments (see below)
 
 ## Example arguments
 
@@ -26,7 +26,7 @@ Running the jar without arguments prints out the usage instructions.
 1. Install `IntelliJ IDEA` with kotlin plugin.
 1. Open IntelliJ IDEA and open project. `File -> Open.. -> <project_path>` (Select `Gradle` if needed.)
 1. `Build -> Build Project`
-1. `Run -> Run... -> com.incquerylabs.vhci.modelaccess.twc.rest.Crawler.kt` (set arguments in Configuration)
+1. `Run -> Run... -> com.incquerylabs.twc.repo.crawler.Crawler.kt` (set arguments in Configuration)
 
 ### Gradle
 
@@ -35,4 +35,4 @@ Running the jar without arguments prints out the usage instructions.
 ### Shadow Jar
 
 1. `./gradlew shadowJar`
-1. `java -jar build/libs/vhci.modelaccess.twc.rest-<version>-all.jar <args>` with arguments (see above)
+1. `java -jar build/libs/twc.repo-crawler-<version>-all.jar <args>` with arguments (see above)
