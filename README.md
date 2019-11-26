@@ -24,6 +24,11 @@ Running the jar without arguments prints out the usage instructions.
 
 `-S twc.openmbee.org -P 8111 -ssl -W 9c368adc-10cc-45d9-bec6-27aedc80e68b -R 6819171d-1f52-4792-a08d-15d50d47985a -B a95e8bd1-f7d2-433e-a0a1-0c1cd7702e59 -REV 229 -C 2000 -u openmbeeguest -pw guest`
 
+## Configuring self-signed certificate when using SSL on Teamwork Cloud OSMC API
+
+- Java has to start with: `-Djavax.net.ssl.trustStore=<path to JKS file> -Djavax.net.ssl.trustStorePassword=<password of JKS file>`
+- Make sure that `ssl` is enabled in CLI arguments.
+
 ## Running from source
 
 1. Clone this repository or download the sources for a [release](https://github.com/IncQueryLabs/repo-crawler/releases).
