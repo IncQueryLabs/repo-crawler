@@ -1,94 +1,42 @@
 package com.incquerylabs.twc.repo.crawler
 
-import com.incquerylabs.twc.repo.crawler.data.*
+import com.incquerylabs.twc.repo.crawler.data.BRANCH_ID
+import com.incquerylabs.twc.repo.crawler.data.RESOURCE_ID
+import com.incquerylabs.twc.repo.crawler.data.REVISION
+import com.incquerylabs.twc.repo.crawler.data.Server
+import com.incquerylabs.twc.repo.crawler.data.WORKSPACE_ID
 import com.incquerylabs.twc.repo.crawler.verticles.MainVerticle
 import com.incquerylabs.twc.repo.crawler.verticles.RESTVerticle
 import io.vertx.core.DeploymentOptions
 import io.vertx.core.Vertx
 import io.vertx.core.cli.CLI
+import io.vertx.core.cli.CommandLine
 import io.vertx.core.cli.Option
 import io.vertx.core.json.Json
 import io.vertx.core.json.JsonObject
 import java.io.File
+import java.util.*
 
 const val CHUNK_SIZE = "chunkSize"
 
 fun main(args: Array<String>) {
 
-    val cli = CLI.create("crawler")
-        .setSummary("A REST Client to query all model element from server.")
-        .addOptions(
-            listOf(
-                Option()
-                    .setLongName("help")
-                    .setShortName("h")
-                    .setDescription("Show help site.")
-                    .setFlag(true),
-                Option()
-                    .setLongName("username")
-                    .setShortName("u")
-                    .setDefaultValue("admin")
-                    .setDescription("TWC username."),
-                Option()
-                    .setLongName("password")
-                    .setShortName("pw")
-                    .setDefaultValue("admin")
-                    .setDescription("TWC password."),
-                Option()
-                    .setLongName("server")
-                    .setShortName("S")
-                    .setDescription("Set server path."),
-                Option()
-                    .setLongName("port")
-                    .setShortName("P")
-                    .setDescription("Set server port number."),
-                Option()
-                    .setLongName("ssl")
-                    .setShortName("ssl")
-                    .setDescription("SSL server connection. Default: false")
-                    .setFlag(true),
-                Option()
-                    .setLongName("instanceNum")
-                    .setShortName("I")
-                    .setDescription("Set number of RESTVerticle instances. Default: 4")
-                    .setDefaultValue("4"),
-                Option()
-                    .setLongName("workspaceId")
-                    .setShortName("W")
-                    .setDescription("Select workspace to crawl"),
-                Option()
-                    .setLongName("resourceId")
-                    .setShortName("R")
-                    .setDescription("Select resource to crawl"),
-                Option()
-                    .setLongName("branchId")
-                    .setShortName("B")
-                    .setDescription("Select branch to crawl"),
-                Option()
-                    .setLongName("revision")
-                    .setShortName("REV")
-                    .setDescription("Select revision to crawl"),
-                Option()
-                    .setLongName("debug")
-                    .setShortName("D")
-                    .setDescription("Enable debug logging. Default: false")
-                    .setFlag(true),
-                Option()
-                    .setLongName("requestSingleElement")
-                    .setShortName("RSE")
-                    .setDescription("Request elements one-by-one. Default: false")
-                    .setFlag(true),
-                Option()
-                    .setLongName(CHUNK_SIZE)
-                    .setShortName("C")
-                    .setDescription("Set the size of chunks to use when crawling elements (-1 to disable chunks). Default: 2000")
-                    .setDefaultValue("2000")
-            )
-        )
-
+    val cli = defineCommandLineInterface()
 
     val commandLine = cli.parse(args.asList(), false)
 
+    try {
+        executeCrawler(commandLine, cli)
+    } catch (e: Exception) {
+        println("Exception occurred: $e")
+        val builder = StringBuilder()
+        cli.usage(builder)
+        println(builder.toString())
+    }
+
+}
+
+private fun executeCrawler(commandLine: CommandLine, cli: CLI) {
     if (commandLine.isFlagEnabled("help")) {
         val builder = StringBuilder()
         cli.usage(builder)
@@ -154,13 +102,15 @@ fun main(args: Array<String>) {
             File("server.config").createNewFile()
         }
 
-        File("server.config").writeText(Json.encode(
-            Server(
-                serverOpt,
-                portOpt.toInt(),
-                isSslEnabled
+        File("server.config").writeText(
+            Json.encode(
+                Server(
+                    serverOpt,
+                    portOpt.toInt(),
+                    isSslEnabled
+                )
             )
-        ))
+        )
         twcMap["server_path"] = serverOpt
         twcMap["server_port"] = portOpt.toInt()
         twcMap["server_ssl"] = isSslEnabled
@@ -206,7 +156,7 @@ fun main(args: Array<String>) {
         } else {
 
             twcMap["credential"] =
-                "Basic ${java.util.Base64.getEncoder().encodeToString("${usr}:${pswd}".toByteArray())}"
+                "Basic ${Base64.getEncoder().encodeToString("${usr}:${pswd}".toByteArray())}"
             twcMap["username"] = usr
 
             vertx.deployVerticle(
@@ -221,6 +171,47 @@ fun main(args: Array<String>) {
             }
         }
     }
+}
 
+private fun defineCommandLineInterface(): CLI {
+    return CLI.create("crawler")
+        .setSummary("A REST Client to query all model element from server.")
+        .addOptions(
+            listOf(
+                createOption("help", "h", "Show usage description")
+                    .setFlag(true),
+                createOption("username", "u", "TWC username")
+                    .setDefaultValue("admin"),
+                createOption("password", "pw", "TWC password")
+                    .setDefaultValue("admin"),
+                createOption("server", "S", "Set server path"),
+                createOption("port", "P", "Set server port number"),
+                createOption("ssl", "ssl", "SSL server connection. Default: false")
+                    .setFlag(true),
+                createOption("instanceNum", "I", "Set number of RESTVerticle instances. Default: 4")
+                    .setDefaultValue("4"),
+                createOption("workspaceId", "W", "Select workspace to crawl"),
+                createOption("resourceId", "R", "Select resource to crawl"),
+                createOption("branchId", "B", "Select branch to crawl"),
+                createOption("revision", "REV", "Select revision to crawl"),
+                createOption("debug", "D", "Enable debug logging. Default: false")
+                    .setFlag(true),
+                createOption("requestSingleElement", "RSE", "Request elements one-by-one. Default: false")
+                    .setFlag(true),
+                createOption(
+                    CHUNK_SIZE,
+                    "C",
+                    "Set the size of chunks to use when crawling elements (-1 to disable chunks). Default: 2000"
+                )
+                    .setDefaultValue("2000")
+            )
+        )
+}
+
+private fun createOption(longName: String, shortName: String, description: String): Option {
+    return Option()
+        .setLongName(longName)
+        .setShortName(shortName)
+        .setDescription(description)
 }
 
