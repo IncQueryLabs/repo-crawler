@@ -1,9 +1,14 @@
 package com.incquerylabs.twc.repo.crawler
 
 import com.incquerylabs.twc.repo.crawler.data.BRANCH_ID
+import com.incquerylabs.twc.repo.crawler.data.CHUNK_SIZE
+import com.incquerylabs.twc.repo.crawler.data.CrawlerConfiguration
+import com.incquerylabs.twc.repo.crawler.data.MAX_HTTP_POOL_SIZE
+import com.incquerylabs.twc.repo.crawler.data.MainConfiguration
 import com.incquerylabs.twc.repo.crawler.data.RESOURCE_ID
 import com.incquerylabs.twc.repo.crawler.data.REVISION
 import com.incquerylabs.twc.repo.crawler.data.Server
+import com.incquerylabs.twc.repo.crawler.data.User
 import com.incquerylabs.twc.repo.crawler.data.WORKSPACE_ID
 import com.incquerylabs.twc.repo.crawler.verticles.MainVerticle
 import com.incquerylabs.twc.repo.crawler.verticles.RESTVerticle
@@ -14,10 +19,9 @@ import io.vertx.core.cli.CommandLine
 import io.vertx.core.cli.Option
 import io.vertx.core.json.Json
 import io.vertx.core.json.JsonObject
+import io.vertx.ext.web.client.WebClientOptions
 import java.io.File
 import java.util.*
-
-const val CHUNK_SIZE = "chunkSize"
 
 fun main(args: Array<String>) {
 
@@ -59,6 +63,7 @@ private fun executeCrawler(commandLine: CommandLine, cli: CLI) {
     val branchId = commandLine.getOptionValue<String>("branchId")
     val revision = commandLine.getOptionValue<String>("revision")
     val chunkSize = commandLine.getOptionValue<String>(CHUNK_SIZE).toInt()
+    val maxPoolSize = commandLine.getOptionValue<String>(MAX_HTTP_POOL_SIZE).toInt()
     val debug = commandLine.isFlagEnabled("debug")
     val requestSingleElement = commandLine.isFlagEnabled("requestSingleElement")
 
@@ -97,24 +102,26 @@ private fun executeCrawler(commandLine: CommandLine, cli: CLI) {
     }
 
 
-    if (serverOpt != null && portOpt != null) {
+    val server = if (serverOpt != null && portOpt != null) {
         if (!File("server.config").exists()) {
             File("server.config").createNewFile()
         }
 
+        val server = Server(
+            serverOpt,
+            portOpt.toInt(),
+            isSslEnabled
+        )
         File("server.config").writeText(
             Json.encode(
-                Server(
-                    serverOpt,
-                    portOpt.toInt(),
-                    isSslEnabled
-                )
+                server
             )
         )
         twcMap["server_path"] = serverOpt
         twcMap["server_port"] = portOpt.toInt()
         twcMap["server_ssl"] = isSslEnabled
         println("New Server config")
+        server
 
     } else {
         if (File("server.config").exists()) {
@@ -128,6 +135,7 @@ private fun executeCrawler(commandLine: CommandLine, cli: CLI) {
                 twcMap["server_path"] = serverPath
                 twcMap["server_port"] = serverPort
                 twcMap["server_ssl"] = sslEnabled
+                Server(serverPath, serverPort, sslEnabled)
             } else {
                 error(
                     "Server config is empty.\n" +
@@ -145,12 +153,20 @@ private fun executeCrawler(commandLine: CommandLine, cli: CLI) {
     }
     println("Server config: ${twcMap["server_path"]}:${twcMap["server_port"]} (ssl: ${twcMap["server_ssl"]})")
 
-    val restVerticle = RESTVerticle()
+    val configuration = CrawlerConfiguration(
+        debug,
+        server,
+        User(usr, pswd),
+        WebClientOptions().setSsl(isSslEnabled).setMaxPoolSize(maxPoolSize),
+        chunkSize
+    )
 
-    val options = DeploymentOptions().setWorker(true).setHa(true).setInstances(instanceNum).setWorkerPoolSize(32)
+    val restVerticle = RESTVerticle(configuration)
+
+    val options = DeploymentOptions().setWorker(true)
 
     twcMap["flag"] = 0
-    vertx.deployVerticle(restVerticle.javaClass.name, options) { deploy ->
+    vertx.deployVerticle(restVerticle, options) { deploy ->
         if (deploy.failed()) {
             error("Deploy failed: ${deploy.cause().message}")
         } else {
@@ -160,10 +176,7 @@ private fun executeCrawler(commandLine: CommandLine, cli: CLI) {
             twcMap["username"] = usr
 
             vertx.deployVerticle(
-                MainVerticle(
-                    usr,
-                    pswd
-                )
+                MainVerticle(MainConfiguration(User(usr, pswd), requestSingleElement))
             ) {
                 if (it.failed()) {
                     error("Deploy failed: ${it.cause().message}\n${it.cause().printStackTrace()}")
@@ -203,7 +216,9 @@ private fun defineCommandLineInterface(): CLI {
                     "C",
                     "Set the size of chunks to use when crawling elements (-1 to disable chunks). Default: 2000"
                 )
-                    .setDefaultValue("2000")
+                    .setDefaultValue("2000"),
+                createOption(MAX_HTTP_POOL_SIZE, "MPS", "Number of concurrent requests. Default: 5")
+                    .setDefaultValue("5")
             )
         )
 }

@@ -1,5 +1,20 @@
 package com.incquerylabs.twc.repo.crawler.data
 
+import io.vertx.ext.web.client.WebClientOptions
+
+data class CrawlerConfiguration(
+    val debug: Boolean,
+    val server: Server,
+    val user: User,
+    val webClientOptions: WebClientOptions,
+    val chunkSize: Int
+)
+
+data class MainConfiguration(
+    val user: User,
+    val requestSingleElement: Boolean
+)
+
 data class Message(val event: String = "", val obj: Any = "")
 data class User(val username: String, val password: String)
 data class Server(val path: String, val port: Int, val ssl: Boolean)
@@ -72,3 +87,6 @@ const val LOGOUT = "logout"
 
 const val USER = "user_cookie"
 const val SESSION = "session_cookie"
+
+const val CHUNK_SIZE = "chunkSize"
+const val MAX_HTTP_POOL_SIZE = "maxHttpPoolSize"

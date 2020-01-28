@@ -4,7 +4,9 @@ import com.incquerylabs.twc.repo.crawler.data.*
 import io.vertx.core.AbstractVerticle
 import io.vertx.core.json.JsonObject
 
-class MainVerticle(val usr: String, val pswd: String) : AbstractVerticle() {
+class MainVerticle(
+    val configuration: MainConfiguration
+) : AbstractVerticle() {
     var sum = 0
     var number = 0
     var s = 0
@@ -12,7 +14,7 @@ class MainVerticle(val usr: String, val pswd: String) : AbstractVerticle() {
 
     override fun start() {
         val twcMap = vertx.sharedData().getLocalMap<Any, Any>(TWCMAP)
-        val requestSingleElements = twcMap["requestSingleElement"] as Boolean
+        val requestSingleElements = configuration.requestSingleElement
 
         val eb = vertx.eventBus()
         vertx.setPeriodic(1000) {
@@ -74,7 +76,7 @@ class MainVerticle(val usr: String, val pswd: String) : AbstractVerticle() {
             TWCVERT_ADDRESS, JsonObject.mapFrom(
                 Message(
                     LOGIN,
-                    User("$usr", "$pswd")
+                    configuration.user
                 )
             ))
         eb.consumer<Any>(TWCMAIN_ADDRESS) { message ->

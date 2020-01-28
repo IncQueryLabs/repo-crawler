@@ -10,21 +10,19 @@ import io.vertx.ext.web.client.WebClientOptions
 import java.io.File
 
 
-class RESTVerticle() : AbstractVerticle() {
+class RESTVerticle(
+    val configuration: CrawlerConfiguration
+) : AbstractVerticle() {
 
-    var serverPath = ""
-    var port = 8080
-    var chunkSize = -1
+    val serverPath = configuration.server.path
+    val port = configuration.server.port
+    val chunkSize = configuration.chunkSize
 
     override fun start() {
         val twcMap = vertx.sharedData().getLocalMap<Any, Any>(TWCMAP)
-        val client = WebClient.create(vertx, WebClientOptions().setSsl(twcMap["server_ssl"] as Boolean))
+        val client = WebClient.create(vertx, configuration.webClientOptions)
 
-        serverPath = twcMap["server_path"].toString()
-        port = twcMap["server_port"] as Int
-        chunkSize = twcMap["chunkSize"] as Int
-
-        val debug = twcMap["debug"] as Boolean
+        val debug = configuration.debug
 
         vertx.eventBus().consumer<Any>(TWCVERT_ADDRESS) { message ->
             val json = message.body() as JsonObject
