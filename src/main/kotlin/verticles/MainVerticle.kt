@@ -178,9 +178,10 @@ class MainVerticle(
                 }
                 REPO -> {
                     val repo = JsonObject(messageData.obj as Map<String, Any>).mapTo(Repo::class.java)
-                    println("Received workspace list $repo")
+                    println("Received workspace list")
                     repo.workspaces.forEach { ws ->
                         val id = JsonObject(ws as Map<String, Any>).getString("@id")
+                        println("Workspace id: $id")
                         eb.send(
                             TWCVERT_ADDRESS,
                             JsonObject.mapFrom(

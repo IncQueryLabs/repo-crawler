@@ -217,8 +217,8 @@ private fun defineCommandLineInterface(): CLI {
                     "Set the size of chunks to use when crawling elements (-1 to disable chunks). Default: 2000"
                 )
                     .setDefaultValue("2000"),
-                createOption(MAX_HTTP_POOL_SIZE, "MPS", "Number of concurrent requests. Default: 5")
-                    .setDefaultValue("5")
+                createOption(MAX_HTTP_POOL_SIZE, "MPS", "Number of concurrent requests. Default: 1")
+                    .setDefaultValue("1")
             )
         )
 }
