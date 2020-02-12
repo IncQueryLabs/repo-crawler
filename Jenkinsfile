@@ -1,8 +1,6 @@
 // Tell Jenkins how to build projects from this repository
 pipeline {
-    parameters {
 
-    }
     agent {
         label 'node'
     }
