@@ -26,7 +26,7 @@ pipeline {
     stages {
         stage('Build') {
             steps {
-                sh "./gradlew shadowJar"
+                sh "./gradlew build shadowJar"
             }
         }
     }
@@ -34,7 +34,7 @@ pipeline {
     post {
         always {
             script {
-                archiveArtifacts '**/build/distributions/**'
+                archiveArtifacts '**/build/distributions/**, **/build/libs/**'
             }
         }
         success {
