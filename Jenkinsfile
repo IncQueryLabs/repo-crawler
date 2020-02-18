@@ -1,6 +1,11 @@
 // Tell Jenkins how to build projects from this repository
 pipeline {
 
+    parameters {
+        // DISTRIBUTION
+        booleanParam(defaultValue: false, description: 'Set to true if you want to create a release', name: 'RELEASE')
+    }
+
     agent {
         label 'node'
     }
@@ -24,9 +29,24 @@ pipeline {
     }
 
     stages {
+        stage('Clean') {
+            steps {
+                sh "./gradlew clean"
+            }
+        }
+
         stage('Build') {
             steps {
                 sh "./gradlew build"
+            }
+        }
+
+        stage('Release') {
+            when {
+                expression { params.RELEASE == true }
+            }
+            steps {
+                sh "./gradlew build -Prelease=true"
             }
         }
     }

@@ -3,8 +3,23 @@ plugins {
     id 'io.vertx.vertx-plugin' version '0.9.0'
 }
 
+def timestampFormat = new java.text.SimpleDateFormat('yyyyMMdd.HHmmss')
+timestampFormat.timeZone = TimeZone.getTimeZone("UTC")
+Date buildTime = new Date()
+ext.releaseProp = hasProperty("release") ? getProperty("release") : false
+
+ext{
+    buildTimestamp = timestampFormat.format(buildTime)
+    baseVersion = '1.2'
+}
+
+def computedVersion = baseVersion + '-' + buildTimestamp
+if (releaseProp.toBoolean()) {
+    computedVersion = baseVersion
+}
+
 group 'com.incquerylabs'
-version '1.2-SNAPSHOT'
+version computedVersion
 
 repositories {
     mavenCentral()
