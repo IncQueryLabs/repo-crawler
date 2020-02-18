@@ -46,7 +46,8 @@ pipeline {
                 expression { params.RELEASE == true }
             }
             steps {
-                sh "./gradlew build -Prelease=true"
+                sh "./gradlew clean collectGithubRelease -Prelease=true"
+                sh "./gradlew githubRelease -Prelease=true"
             }
         }
     }
