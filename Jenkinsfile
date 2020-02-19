@@ -47,7 +47,12 @@ pipeline {
             }
             steps {
                 sh "./gradlew clean collectGithubRelease -Prelease=true"
-                sh "./gradlew githubRelease -Prelease=true"
+                withCredentials([usernamePassword(
+                        credentialsId: 'github-access-token',
+                        passwordVariable: 'GITHUB_RELEASE_TOKEN',
+                        usernameVariable: 'GITHUB_USER')]) {
+                    sh "./gradlew githubRelease -Prelease=true -PgithubToken=$GITHUB_RELEASE_TOKEN"
+                }
             }
         }
     }
