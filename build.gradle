@@ -66,10 +66,8 @@ task collectGithubRelease(type: Copy) {
 }
 
 def githubToken = hasProperty('githubToken') ? getProperty('githubToken') : "token"
-println "1. $githubToken"
 
 githubRelease {
-    println "2. $githubToken"
     token githubToken
     owner "IncQueryLabs"
     repo "repo-crawler"
