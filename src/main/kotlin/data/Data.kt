@@ -19,13 +19,16 @@ data class Message(val event: String = "", val obj: Any = "")
 data class User(val username: String, val password: String)
 data class Server(val path: String, val port: Int, val ssl: Boolean)
 data class Repo(val id: String = "", val workspaces: List<Any?> = emptyList())
-data class Workspace(val id: String = "", val resources: List<Any?> = emptyList())
-data class Resource(val id: String = "", val workspace_id: String = "", val branches: List<Any?> = emptyList())
+data class Workspace(val id: String = "", val title: String = "", val resources: List<Any?> = emptyList())
+data class Resource(val id: String = "", val title: String = "", val workspace_id: String = "", val workspace_title: String="", val branches: List<Any?> = emptyList())
 data class Branch(
-    val id: String = "",
-    val resource_id: String = "",
-    val workspace_id: String = "",
-    val revisions: List<Any?> = emptyList()
+        val id: String = "",
+        val title: String = "",
+        val resource_id: String = "",
+        val resource_title: String = "",
+        val workspace_id: String = "",
+        val workspace_title: String = "",
+        val revisions: List<Any?> = emptyList()
 )
 
 data class Revision(
@@ -56,10 +59,13 @@ data class Elements(
 const val REPO = "repo"
 const val WORKSPACE = "workspace"
 const val WORKSPACE_ID = "workspace_id"
+const val WORKSPACE_TITLE = "workspace_title"
 const val RESOURCE = "resource"
 const val RESOURCE_ID = "resource_id"
+const val RESOURCE_TITLE = "resource_title"
 const val BRANCH = "branch"
 const val BRANCH_ID = "branch_id"
+const val BRANCH_TITLE = "branch_title"
 const val REVISION = "revision"
 const val REVISION_ID = "revision_id"
 const val ELEMENTS = "elements"

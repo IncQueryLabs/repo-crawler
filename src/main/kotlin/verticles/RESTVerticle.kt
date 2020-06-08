@@ -6,7 +6,6 @@ import io.vertx.core.buffer.Buffer
 import io.vertx.core.json.JsonObject
 import io.vertx.core.shareddata.LocalMap
 import io.vertx.ext.web.client.WebClient
-import io.vertx.ext.web.client.WebClientOptions
 import java.io.File
 
 
@@ -175,6 +174,7 @@ class RESTVerticle(
                 }
 
             }
+
     }
 
     private fun queryPrepared(elementSize: Long) {
@@ -308,11 +308,13 @@ class RESTVerticle(
     private fun getRevisions(client: WebClient, twcMap: LocalMap<Any, Any>, obj: JsonObject) {
         queryPrepared(1)
         val workspaceId = obj.getString(WORKSPACE_ID)
+        val workspaceTitle = obj.getString(WORKSPACE_TITLE)
         val resourceId = obj.getString(RESOURCE_ID)
+        val resourceTitle = obj.getString(RESOURCE_TITLE)
         val branchId = obj.getString(BRANCH_ID)
         client.get(
             port, serverPath,
-            "/osmc/workspaces/${workspaceId}/resources/${resourceId}/branches/${branchId}/revisions"
+            "/osmc/workspaces/${workspaceId}/resources/${resourceId}/branches/${branchId}"
         )
             .putHeader("content-type", "application/ld+json")
             .putHeader("Cookie", "${twcMap[USER]}")
@@ -324,8 +326,11 @@ class RESTVerticle(
                         val data = ar.result().bodyAsJsonArray()
                         val branch = Branch(
                             branchId,
+                            data.getJsonObject(1).getString("dcterms:title"),
                             resourceId,
+                            resourceTitle,
                             workspaceId,
+                            workspaceTitle,
                             data.getJsonObject(0).getJsonArray("ldp:contains").list
                         )
                         //println(resource)
@@ -351,9 +356,13 @@ class RESTVerticle(
             }
     }
 
+
+
     private fun getBranches(client: WebClient, twcMap: LocalMap<Any, Any>, obj: JsonObject) {
         val workspaceId = obj.getString(WORKSPACE_ID)
         val resourceId = obj.getString(RESOURCE_ID)
+        val workspaceTitle = obj.getString(WORKSPACE_TITLE)
+        val resourceTitle = obj.getString(RESOURCE_TITLE)
         client.get(port, serverPath, "/osmc/workspaces/${workspaceId}/resources/${resourceId}/branches")
             .putHeader("content-type", "application/ld+json")
             .putHeader("Cookie", "${twcMap[USER]}")
@@ -361,11 +370,12 @@ class RESTVerticle(
             .send { ar ->
                 if (ar.succeeded()) {
                     if (ar.result().statusCode() == 200) {
-
                         val data = ar.result().bodyAsJsonObject()
                         val resource = Resource(
                             resourceId,
+                            resourceTitle,
                             workspaceId,
+                            workspaceTitle,
                             data.getJsonArray("ldp:contains").list
                         )
                         //println(resource)
@@ -393,7 +403,7 @@ class RESTVerticle(
 
     private fun getResources(client: WebClient, twcMap: LocalMap<Any, Any>, obj: JsonObject) {
         val workspaceId = obj.getString(WORKSPACE_ID)
-        client.get(port, serverPath, "/osmc/workspaces/${workspaceId}/resources")
+        client.get(port, serverPath, "/osmc/workspaces/${workspaceId}/resources?includeBody=True")
             .putHeader("content-type", "application/ld+json")
             .putHeader("Cookie", "${twcMap[USER]}")
             .putHeader("Cookie", "${twcMap[SESSION]}")
@@ -402,9 +412,17 @@ class RESTVerticle(
                     if (ar.result().statusCode() == 200) {
 
                         val data = ar.result().bodyAsJsonArray()
+                        val resourceData = data.getJsonObject(1).getJsonArray("kerml:resources").list
+
+                        val resources = resourceData.map {
+                            it as HashMap<String,Any>
+                            it.filterKeys { key -> key=="dcterms:title" || key=="ID" }
+                        }
+
                         val workspace = Workspace(
                             workspaceId,
-                            data.getJsonObject(0).getJsonArray("ldp:contains").list
+                            data.getJsonObject(1).getString("dcterms:title"),
+                            resources
                         )
                         //println(workspace)
                         vertx.eventBus().send(
@@ -425,7 +443,6 @@ class RESTVerticle(
                     println("Query Resources failed: ${ar.cause().message}")
                     myError()
                 }
-
             }
     }
 
