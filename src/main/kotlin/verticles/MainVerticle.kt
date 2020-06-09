@@ -178,10 +178,10 @@ class MainVerticle(
                 }
                 REPO -> {
                     val repo = JsonObject(messageData.obj as Map<String, Any>).mapTo(Repo::class.java)
-                    println("Received workspace list")
+                    println("Received workspaces of repository:")
                     repo.workspaces.forEach { ws ->
                         val id = JsonObject(ws as Map<String, Any>).getString("@id")
-                        println("Workspace id: $id")
+                        println("\t * $id")
                         eb.send(
                             TWCVERT_ADDRESS,
                             JsonObject.mapFrom(
@@ -198,11 +198,14 @@ class MainVerticle(
                 }
                 WORKSPACE -> {
                     val workspace = JsonObject(messageData.obj as Map<String, Any>).mapTo(Workspace::class.java)
-                    println("Received workspace content for $workspace")
                     val workspaceId = workspace.id
+                    val workspaceTitle = workspace.title
+                    println("Received resources of workspace $workspaceTitle (id: $workspaceId):")
 
                     workspace.resources.forEach { res ->
-                        val resourceId = JsonObject(res as Map<String, Any>).getString("@id")
+                        val resourceId = JsonObject(res as Map<String, Any>).getString("ID")
+                        val resourceTitle = JsonObject(res as Map<String, Any>).getString("dcterms:title")
+                        println("\t * $resourceTitle (id: $resourceId)")
                         eb.send(
                             TWCVERT_ADDRESS, JsonObject.mapFrom(
                                 Message(
@@ -211,11 +214,18 @@ class MainVerticle(
                                         .put(
                                             WORKSPACE_ID,
                                             workspaceId
-                                        )
+                                        ).put(
+                                            WORKSPACE_TITLE,
+                                            workspaceTitle
+                                            )
                                         .put(
                                             RESOURCE_ID,
                                             resourceId
-                                        )
+                                        ).put(
+                                            RESOURCE_TITLE,
+                                            resourceTitle
+                                            )
+
                                 )
                             )
                         )
@@ -223,11 +233,14 @@ class MainVerticle(
                 }
                 RESOURCE -> {
                     val resource = JsonObject(messageData.obj as Map<String, Any>).mapTo(Resource::class.java)
-                    println("Received resource content for $resource")
                     val resourceId = resource.id
+                    val resourceTitle = resource.title
                     val workspaceId = resource.workspace_id
+                    val workspaceTitle = resource.workspace_title
+                    println("Received branches of resource $resourceTitle (id: $resourceId) in workpace $workspaceTitle (id: $workspaceId):")
                     resource.branches.forEach { branch ->
                         val branchId = JsonObject(branch as Map<String, Any>).getString("@id")
+                        println("\t * $branchId")
                         eb.send(
                             TWCVERT_ADDRESS, JsonObject.mapFrom(
                                 Message(
@@ -236,12 +249,17 @@ class MainVerticle(
                                         .put(
                                             WORKSPACE_ID,
                                             workspaceId
-                                        )
-                                        .put(
+                                        ).put(
+                                            WORKSPACE_TITLE,
+                                            workspaceTitle
+                                        ).put
+                                        (
                                             RESOURCE_ID,
                                             resourceId
-                                        )
-                                        .put(
+                                        ).put(
+                                            RESOURCE_TITLE,
+                                            resourceTitle
+                                        ).put(
                                             BRANCH_ID,
                                             branchId
                                         )
@@ -253,10 +271,13 @@ class MainVerticle(
                 }
                 BRANCH -> {
                     val branch = JsonObject(messageData.obj as Map<String, Any>).mapTo(Branch::class.java)
-                    println("Received branch content for $branch")
                     val branchId = branch.id
                     val resourceId = branch.resource_id
                     val workspaceId = branch.workspace_id
+                    println("Received revisions of branch ${branch.title} (id: $branchId) in resorce " +
+                            "${branch.resource_title} (id: $resourceId) in workspace " +
+                            "${branch.workspace_title} (id: $workspaceId):")
+                    println("\t * ${branch.revisions}")
 
                     branch.revisions.forEach { rev ->
                         val revId = (rev as Int)
@@ -366,7 +387,7 @@ class MainVerticle(
 
                 }
                 ELEMENT -> {
-                    //                    println("Received Element")
+
                     val elementRequest = JsonObject(messageData.obj as Map<String, Any>).mapTo(Element::class.java)
                     val revisionId = elementRequest.revision_id
                     val branchId = elementRequest.branch_id
