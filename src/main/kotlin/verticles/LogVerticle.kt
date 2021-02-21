@@ -1,13 +1,18 @@
 package com.incquerylabs.twc.repo.crawler.verticles
 
 import com.incquerylabs.twc.repo.crawler.data.*
-import com.incquerylabs.twc.repo.crawler.data.LogMessage.RevisionsMessage
 import com.incquerylabs.twc.repo.crawler.log.ConsoleLogger
-import com.incquerylabs.twc.repo.crawler.log.InMemLogger
 import com.incquerylabs.twc.repo.crawler.log.VisitLogger
 import io.vertx.core.AbstractVerticle
-import io.vertx.core.json.JsonObject
 
+/**
+ * Vert.x log handling verticle
+ *
+ * Listens to log messages asynchronously on the address defined by TWCLOG_ADDRESS,
+ *  handles incoming messages using the give loggers.
+ *
+ * @param backingLoggers the loggers to use for processing, all receive every message
+ */
 class LogVerticle(
         private val backingLoggers: Collection<VisitLogger> = listOf(ConsoleLogger())
 ) : AbstractVerticle() {

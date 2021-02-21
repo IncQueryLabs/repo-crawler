@@ -3,12 +3,18 @@ package com.incquerylabs.twc.repo.crawler.log
 import com.incquerylabs.twc.repo.crawler.data.LogEntity
 import com.incquerylabs.twc.repo.crawler.data.LogMessage
 
+/**
+ * Log message formatter service
+ */
 interface LogFormatter {
 
     fun format(log: LogMessage): String
 
 }
 
+/**
+ * Default log formatter implementation based on previous stdout solution
+ */
 object DefaultLogFormatter : LogFormatter {
 
     override fun format(log: LogMessage): String {

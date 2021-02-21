@@ -5,6 +5,9 @@ data class LogEntity(
         val title: String
 )
 
+/**
+ * Structure log messages for crawling
+ */
 sealed class LogMessage {
 
     data class WorkspacesMessage(
