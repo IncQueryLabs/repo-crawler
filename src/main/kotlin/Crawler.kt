@@ -228,7 +228,7 @@ private fun defineCommandLineInterface(): CLI {
                     "C",
                     "Set the size of chunks to use when crawling elements (-1 to disable chunks). Default: 2000"
                 ).setDefaultValue("2000"),
-                createOption("silent", "s", "Don't log to stdout").setFlag(true),
+                createOption("silent", "x", "Don't log to stdout").setFlag(true),
                 createOption("log-sync", "ls", "Log to file as crawling").setArgName("file"),
                 createOption("log-end", "le", "Log to file after crawling").setArgName("file"),
                 createOption(MAX_HTTP_POOL_SIZE, "MPS", "Number of concurrent requests. Default: 1")
