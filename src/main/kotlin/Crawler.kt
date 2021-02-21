@@ -1,15 +1,11 @@
 package com.incquerylabs.twc.repo.crawler
 
-import com.incquerylabs.twc.repo.crawler.data.BRANCH_ID
-import com.incquerylabs.twc.repo.crawler.data.CHUNK_SIZE
-import com.incquerylabs.twc.repo.crawler.data.CrawlerConfiguration
-import com.incquerylabs.twc.repo.crawler.data.MAX_HTTP_POOL_SIZE
-import com.incquerylabs.twc.repo.crawler.data.MainConfiguration
-import com.incquerylabs.twc.repo.crawler.data.RESOURCE_ID
-import com.incquerylabs.twc.repo.crawler.data.REVISION
-import com.incquerylabs.twc.repo.crawler.data.Server
-import com.incquerylabs.twc.repo.crawler.data.User
-import com.incquerylabs.twc.repo.crawler.data.WORKSPACE_ID
+import com.incquerylabs.twc.repo.crawler.data.*
+import com.incquerylabs.twc.repo.crawler.log.ConsoleLogger
+import com.incquerylabs.twc.repo.crawler.log.FileAtStopLogger
+import com.incquerylabs.twc.repo.crawler.log.FileSyncLogger
+import com.incquerylabs.twc.repo.crawler.log.LogCodec
+import com.incquerylabs.twc.repo.crawler.verticles.LogVerticle
 import com.incquerylabs.twc.repo.crawler.verticles.MainVerticle
 import com.incquerylabs.twc.repo.crawler.verticles.RESTVerticle
 import io.vertx.core.DeploymentOptions
@@ -21,6 +17,7 @@ import io.vertx.core.json.Json
 import io.vertx.core.json.JsonObject
 import io.vertx.ext.web.client.WebClientOptions
 import java.io.File
+import java.nio.file.Paths
 import java.util.*
 
 fun main(args: Array<String>) {
@@ -49,6 +46,7 @@ private fun executeCrawler(commandLine: CommandLine, cli: CLI) {
     }
 
     val vertx = Vertx.vertx()
+    LogCodec.registerForAll(vertx)
     val sd = vertx.sharedData()
     val twcMap = sd.getLocalMap<Any, Any>("twcMap")
 
@@ -101,6 +99,12 @@ private fun executeCrawler(commandLine: CommandLine, cli: CLI) {
         twcMap[REVISION] = revision.toInt()
     }
 
+    val loggers = listOfNotNull(
+            if (commandLine.isFlagEnabled("silent")) null else ConsoleLogger(),
+            commandLine.getOptionValue<String>("log-sync")?.let { FileSyncLogger(Paths.get(it)) },
+            commandLine.getOptionValue<String>("log-end")?.let { FileAtStopLogger(Paths.get(it)) }
+    )
+    val logVerticle = LogVerticle(loggers)
 
     val server = if (serverOpt != null && portOpt != null) {
         if (!File("server.config").exists()) {
@@ -180,6 +184,14 @@ private fun executeCrawler(commandLine: CommandLine, cli: CLI) {
             ) {
                 if (it.failed()) {
                     error("Deploy failed: ${it.cause().message}\n${it.cause().printStackTrace()}")
+                } else {
+
+                    vertx.deployVerticle(logVerticle) { logRes ->
+                        if (logRes.failed()) {
+                            error("Deploy failed: ${logRes.cause().message}\n${logRes.cause().printStackTrace()}")
+                        }
+                    }
+
                 }
             }
         }
@@ -215,8 +227,10 @@ private fun defineCommandLineInterface(): CLI {
                     CHUNK_SIZE,
                     "C",
                     "Set the size of chunks to use when crawling elements (-1 to disable chunks). Default: 2000"
-                )
-                    .setDefaultValue("2000"),
+                ).setDefaultValue("2000"),
+                createOption("silent", "s", "Don't log to stdout").setFlag(true),
+                createOption("log-sync", "ls", "Log to file as crawling").setArgName("file"),
+                createOption("log-end", "le", "Log to file after crawling").setArgName("file"),
                 createOption(MAX_HTTP_POOL_SIZE, "MPS", "Number of concurrent requests. Default: 1")
                     .setDefaultValue("1")
             )
