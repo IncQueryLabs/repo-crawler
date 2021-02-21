@@ -308,9 +308,9 @@ class RESTVerticle(
     private fun getRevisions(client: WebClient, twcMap: LocalMap<Any, Any>, obj: JsonObject) {
         queryPrepared(1)
         val workspaceId = obj.getString(WORKSPACE_ID)
-        val workspaceTitle = obj.getString(WORKSPACE_TITLE)
+        val workspaceTitle = obj.getString(WORKSPACE_TITLE) ?: ""
         val resourceId = obj.getString(RESOURCE_ID)
-        val resourceTitle = obj.getString(RESOURCE_TITLE)
+        val resourceTitle = obj.getString(RESOURCE_TITLE) ?: ""
         val branchId = obj.getString(BRANCH_ID)
         client.get(
             port, serverPath,
@@ -361,8 +361,8 @@ class RESTVerticle(
     private fun getBranches(client: WebClient, twcMap: LocalMap<Any, Any>, obj: JsonObject) {
         val workspaceId = obj.getString(WORKSPACE_ID)
         val resourceId = obj.getString(RESOURCE_ID)
-        val workspaceTitle = obj.getString(WORKSPACE_TITLE)
-        val resourceTitle = obj.getString(RESOURCE_TITLE)
+        val workspaceTitle = obj.getString(WORKSPACE_TITLE) ?: ""
+        val resourceTitle = obj.getString(RESOURCE_TITLE) ?: ""
         client.get(port, serverPath, "/osmc/workspaces/${workspaceId}/resources/${resourceId}/branches")
             .putHeader("content-type", "application/ld+json")
             .putHeader("Cookie", "${twcMap[USER]}")

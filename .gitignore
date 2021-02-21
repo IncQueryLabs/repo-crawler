@@ -14,3 +14,4 @@ gradle-app.setting
 *.iml
 
 server.config
+session_details_*

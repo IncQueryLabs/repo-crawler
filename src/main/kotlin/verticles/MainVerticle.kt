@@ -12,11 +12,23 @@ class MainVerticle(
     var s = 0
     var queries = 0
 
+    companion object {
+        @Suppress("UNCHECKED_CAST")
+        private fun asJson(content: Any?): JsonObject {
+            return JsonObject(content as Map<String, Any>)
+        }
+    }
+
     override fun start() {
         val twcMap = vertx.sharedData().getLocalMap<Any, Any>(TWCMAP)
         val requestSingleElements = configuration.requestSingleElement
 
         val eb = vertx.eventBus()
+
+        fun log(logMessage: LogMessage) {
+            eb.send(TWCLOG_ADDRESS, logMessage)
+        }
+
         vertx.setPeriodic(1000) {
             vertx.sharedData().getCounter(QUERIES) { queriesR ->
                 if (queriesR.succeeded()) {
@@ -177,11 +189,16 @@ class MainVerticle(
 
                 }
                 REPO -> {
-                    val repo = JsonObject(messageData.obj as Map<String, Any>).mapTo(Repo::class.java)
-                    println("Received workspaces of repository:")
-                    repo.workspaces.forEach { ws ->
-                        val id = JsonObject(ws as Map<String, Any>).getString("@id")
-                        println("\t * $id")
+                    val repo = asJson(messageData.obj).mapTo(Repo::class.java)
+                    val workspaceIds = repo.workspaces.map { ws ->
+                        asJson(ws).getString("@id")
+                    }
+
+                    log(LogMessage.WorkspacesMessage(
+                            workspaces = workspaceIds
+                    ))
+
+                    workspaceIds.forEach { id ->
                         eb.send(
                             TWCVERT_ADDRESS,
                             JsonObject.mapFrom(
@@ -197,15 +214,22 @@ class MainVerticle(
                     }
                 }
                 WORKSPACE -> {
-                    val workspace = JsonObject(messageData.obj as Map<String, Any>).mapTo(Workspace::class.java)
+                    val workspace = asJson(messageData.obj).mapTo(Workspace::class.java)
                     val workspaceId = workspace.id
                     val workspaceTitle = workspace.title
-                    println("Received resources of workspace $workspaceTitle (id: $workspaceId):")
+
+                    val workspaceLog = LogEntity(workspace.id, workspace.title)
+                    val resourcesLog = workspace.resources.map { resource ->
+                        val json = asJson(resource)
+                        LogEntity(json.getString("ID"), json.getString("dcterms:title"))
+                    }
+                    log(LogMessage.ResourcesMessage(
+                        workspace = workspaceLog, resources = resourcesLog
+                    ))
 
                     workspace.resources.forEach { res ->
                         val resourceId = JsonObject(res as Map<String, Any>).getString("ID")
                         val resourceTitle = JsonObject(res as Map<String, Any>).getString("dcterms:title")
-                        println("\t * $resourceTitle (id: $resourceId)")
                         eb.send(
                             TWCVERT_ADDRESS, JsonObject.mapFrom(
                                 Message(
@@ -232,15 +256,22 @@ class MainVerticle(
                     }
                 }
                 RESOURCE -> {
-                    val resource = JsonObject(messageData.obj as Map<String, Any>).mapTo(Resource::class.java)
+                    val resource = asJson(messageData.obj).mapTo(Resource::class.java)
                     val resourceId = resource.id
                     val resourceTitle = resource.title
                     val workspaceId = resource.workspace_id
                     val workspaceTitle = resource.workspace_title
-                    println("Received branches of resource $resourceTitle (id: $resourceId) in workpace $workspaceTitle (id: $workspaceId):")
-                    resource.branches.forEach { branch ->
-                        val branchId = JsonObject(branch as Map<String, Any>).getString("@id")
-                        println("\t * $branchId")
+
+                    val brancheIds = resource.branches.map { branch ->
+                        asJson(branch).getString("@id")
+                    }
+                    log(LogMessage.BranchesMessage(
+                            workspace = LogEntity(workspaceId, workspaceTitle),
+                            resource = LogEntity(resourceId, resourceTitle),
+                            branches = brancheIds
+                    ))
+
+                    brancheIds.forEach { branchId ->
                         eb.send(
                             TWCVERT_ADDRESS, JsonObject.mapFrom(
                                 Message(
@@ -270,14 +301,21 @@ class MainVerticle(
 
                 }
                 BRANCH -> {
-                    val branch = JsonObject(messageData.obj as Map<String, Any>).mapTo(Branch::class.java)
+                    val branch = asJson(messageData.obj).mapTo(Branch::class.java)
                     val branchId = branch.id
                     val resourceId = branch.resource_id
                     val workspaceId = branch.workspace_id
-                    println("Received revisions of branch ${branch.title} (id: $branchId) in resorce " +
-                            "${branch.resource_title} (id: $resourceId) in workspace " +
-                            "${branch.workspace_title} (id: $workspaceId):")
-                    println("\t * ${branch.revisions}")
+
+                    val revisionsMessage = branch.revisions.map { revision ->
+                        revision.toString()
+                    }
+
+                    log(LogMessage.RevisionsMessage(
+                            workspace = LogEntity(branch.workspace_id, branch.workspace_title),
+                            resource = LogEntity(branch.resource_id, branch.resource_title),
+                            branch = LogEntity(branch.id, branch.title),
+                            revisions = revisionsMessage
+                    ))
 
                     branch.revisions.forEach { rev ->
                         val revId = (rev as Int)
