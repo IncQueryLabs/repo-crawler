@@ -1,0 +1,31 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-job
+
+spec:
+  template:
+    spec:
+      containers:
+        - image: repo-crawler
+          imagePullPolicy: Never
+          name: repo-crawler-pod
+          {{- if .Values.arguments }}
+          args:
+            {{- range .Values.arguments }}
+            - {{ . }}
+            {{- end }}
+          {{- end }}
+          {{- if .Values.server }}
+          volumeMounts:
+            - name: "config"
+              mountPath: /app/server.config
+              subPath: server.config
+          {{- end }}
+      restartPolicy: OnFailure
+      {{- if .Values.server }}
+      volumes:
+        - name: "config"
+          configMap:
+            name: {{ .Release.Name }}-config
+      {{- end }}
