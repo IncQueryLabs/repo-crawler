@@ -8,7 +8,7 @@ spec:
     spec:
       containers:
         - image: repo-crawler:{{ .Chart.AppVersion }}
-          imagePullPolicy: Never
+          imagePullPolicy: IfNotPresent
           name: repo-crawler-pod
           {{- if .Values.arguments }}
           args:
