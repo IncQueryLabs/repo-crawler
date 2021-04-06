@@ -157,7 +157,7 @@ private fun executeCrawler(commandLine: CommandLine, cli: CLI) {
         debug,
         server,
         User(usr, pswd),
-        WebClientOptions().setSsl(isSslEnabled).setMaxPoolSize(maxPoolSize),
+        WebClientOptions().setSsl(twcMap["server_ssl"] as Boolean).setMaxPoolSize(maxPoolSize),
         chunkSize
     )
 
