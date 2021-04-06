@@ -7,7 +7,7 @@ spec:
   template:
     spec:
       containers:
-        - image: repo-crawler
+        - image: repo-crawler:{{ .Chart.AppVersion }}
           imagePullPolicy: Never
           name: repo-crawler-pod
           {{- if .Values.arguments }}
@@ -16,14 +16,14 @@ spec:
             - {{ . }}
             {{- end }}
           {{- end }}
-          {{- if .Values.server }}
+          {{- if .Values.serverUri }}
           volumeMounts:
             - name: "config"
               mountPath: /app/server.config
               subPath: server.config
           {{- end }}
       restartPolicy: OnFailure
-      {{- if .Values.server }}
+      {{- if .Values.serverUri }}
       volumes:
         - name: "config"
           configMap:

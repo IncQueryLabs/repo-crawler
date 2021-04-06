@@ -1,2 +1,5 @@
+# Numbers need to be put into "": https://github.com/kubernetes/kubernetes/issues/82296
 arguments: ['-W', '9c368adc-10cc-45d9-bec6-27aedc80e68b', '-R', 'c6bede89-cd5e-487b-aca8-a4f384370759', '-B', '29110c0f-bdc1-4294-ae24-9fd608629cac', '-REV', '"350"', '-C', '"2000"', '-u', 'openmbeeguest', '-pw', 'guest']
-server: '{"path":"twc.openmbee.org","port":8111,"ssl":true}'
+serverUri: twc.openmbee.org
+port: 8111
+ssl: true

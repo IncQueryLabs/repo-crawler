@@ -4,4 +4,4 @@ metadata:
   name: {{ .Release.Name }}-config
 data:
   server.config: |
-    {{ .Values.server }}
+    {"path":"{{ .Values.serverUri }}","port":{{ .Values.port }},"ssl":{{ .Values.ssl }}}
