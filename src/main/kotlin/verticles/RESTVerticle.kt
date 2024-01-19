@@ -1,6 +1,7 @@
 package com.incquerylabs.twc.repo.crawler.verticles
 
 import com.incquerylabs.twc.repo.crawler.data.*
+import com.incquerylabs.twc.repo.crawler.integration.ContentHandler
 import io.vertx.core.AbstractVerticle
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.json.JsonObject
@@ -10,7 +11,8 @@ import java.io.File
 
 
 class RESTVerticle(
-    val configuration: CrawlerConfiguration
+    val configuration: CrawlerConfiguration,
+    val elementContentHandler: ContentHandler
 ) : AbstractVerticle() {
 
     val serverPath = configuration.server.path
@@ -163,7 +165,7 @@ class RESTVerticle(
                                 )
                             }
                         }
-
+                        elementContentHandler.handleContent(data, serverPath, workspaceId, resourceId, branchId, revisionId)
                     } else {
                         println("getElements: ${ar.result().statusCode()} : ${ar.result().statusMessage()}")
                         myError()
