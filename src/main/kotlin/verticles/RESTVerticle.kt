@@ -99,8 +99,8 @@ class RESTVerticle(
         val resourceId = obj.getString(RESOURCE_ID)
         val branchId = obj.getString(BRANCH_ID)
         val revisionId = obj.getInteger(REVISION_ID)
-        val elementIds = obj.getJsonArray(ELEMENT_IDS)
-        val elementSize = elementIds.size().toLong()
+        val elementIds = obj.getJsonArray(ELEMENT_IDS).map { it.toString().trim('"') }
+        val elementSize = elementIds.size.toLong()
         queryPrepared(elementSize)
 
         client.post(
@@ -118,14 +118,15 @@ class RESTVerticle(
 
                         queryCompleted(elementSize)
                         val containedElements = elementIds.flatMap { elementId ->
-                            val element = data.getJsonObject(elementId as String).getJsonArray("data")
+                            val element = data.getJsonObject(elementId).getJsonArray("data")
                             element.getJsonObject(0).getJsonArray("ldp:contains")
                         }
                         if (containedElements.isNotEmpty()) {
                             if (chunkSize > 1) {
                                 containedElements.withIndex().groupBy {
                                     it.index / chunkSize
-                                }.values.map { it.map { it.value } }.forEach { chunkList ->
+                                }.values.map { it.map {
+                                    e -> e.value } }.forEach { chunkList ->
                                     val elementM = Elements(
                                         revisionId,
                                         branchId,
