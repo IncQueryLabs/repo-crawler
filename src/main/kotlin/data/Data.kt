@@ -7,7 +7,8 @@ data class CrawlerConfiguration(
     val server: Server,
     val user: User,
     val webClientOptions: WebClientOptions,
-    val chunkSize: Int
+    val chunkSize: Int,
+    val requestTimeout: Long = 180
 )
 
 data class MainConfiguration(
@@ -95,4 +96,5 @@ const val USER = "user_cookie"
 const val SESSION = "session_cookie"
 
 const val CHUNK_SIZE = "chunkSize"
+const val REQUEST_TIMEOUT = "timeout"
 const val MAX_HTTP_POOL_SIZE = "maxHttpPoolSize"

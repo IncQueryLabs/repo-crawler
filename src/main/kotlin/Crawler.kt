@@ -1,15 +1,6 @@
 package com.incquerylabs.twc.repo.crawler
 
-import com.incquerylabs.twc.repo.crawler.data.BRANCH_ID
-import com.incquerylabs.twc.repo.crawler.data.CHUNK_SIZE
-import com.incquerylabs.twc.repo.crawler.data.CrawlerConfiguration
-import com.incquerylabs.twc.repo.crawler.data.MAX_HTTP_POOL_SIZE
-import com.incquerylabs.twc.repo.crawler.data.MainConfiguration
-import com.incquerylabs.twc.repo.crawler.data.RESOURCE_ID
-import com.incquerylabs.twc.repo.crawler.data.REVISION
-import com.incquerylabs.twc.repo.crawler.data.Server
-import com.incquerylabs.twc.repo.crawler.data.User
-import com.incquerylabs.twc.repo.crawler.data.WORKSPACE_ID
+import com.incquerylabs.twc.repo.crawler.data.*
 import com.incquerylabs.twc.repo.crawler.verticles.MainVerticle
 import com.incquerylabs.twc.repo.crawler.verticles.RESTVerticle
 import io.vertx.core.DeploymentOptions
@@ -63,6 +54,7 @@ private fun executeCrawler(commandLine: CommandLine, cli: CLI) {
     val branchId = commandLine.getOptionValue<String>("branchId")
     val revision = commandLine.getOptionValue<String>("revision")
     val chunkSize = commandLine.getOptionValue<String>(CHUNK_SIZE).toInt()
+    val requestTimeout = commandLine.getOptionValue<String>(REQUEST_TIMEOUT).toLong()
     val maxPoolSize = commandLine.getOptionValue<String>(MAX_HTTP_POOL_SIZE).toInt()
     val debug = commandLine.isFlagEnabled("debug")
     val requestSingleElement = commandLine.isFlagEnabled("requestSingleElement")
@@ -158,7 +150,8 @@ private fun executeCrawler(commandLine: CommandLine, cli: CLI) {
         server,
         User(usr, pswd),
         WebClientOptions().setSsl(isSslEnabled).setMaxPoolSize(maxPoolSize),
-        chunkSize
+        chunkSize,
+        requestTimeout
     )
 
     val restVerticle = RESTVerticle(configuration)
@@ -218,7 +211,8 @@ private fun defineCommandLineInterface(): CLI {
                 )
                     .setDefaultValue("2000"),
                 createOption(MAX_HTTP_POOL_SIZE, "MPS", "Number of concurrent requests. Default: 1")
-                    .setDefaultValue("1")
+                    .setDefaultValue("1"),
+                createOption(REQUEST_TIMEOUT, "t", "Request timeout. Default: 60 sec").setDefaultValue("60")
             )
         )
 }
