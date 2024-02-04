@@ -48,6 +48,7 @@ private fun executeCrawler(commandLine: CommandLine, cli: CLI) {
     val serverOpt = commandLine.getOptionValue<String>("server")
     val portOpt = commandLine.getOptionValue<String>("port")
     val isSslEnabled = commandLine.isFlagEnabled("ssl")
+    val trustAll = commandLine.isFlagEnabled(TRUST_ALL_SSL_CERT)
     val instanceNum = commandLine.getOptionValue<String>("instanceNum").toInt()
     val workspaceId = commandLine.getOptionValue<String>("workspaceId")
     val resourceId = commandLine.getOptionValue<String>("resourceId")
@@ -149,7 +150,13 @@ private fun executeCrawler(commandLine: CommandLine, cli: CLI) {
         debug,
         server,
         User(usr, pswd),
-        WebClientOptions().setSsl(isSslEnabled).setMaxPoolSize(maxPoolSize),
+        WebClientOptions().setSsl(isSslEnabled).setMaxPoolSize(maxPoolSize)
+            .also {
+                if (trustAll) {
+                    it.setTrustAll(true)
+                    it.setVerifyHost(false)
+                }
+            },
         chunkSize,
         requestTimeout
     )
@@ -194,6 +201,11 @@ private fun defineCommandLineInterface(): CLI {
                 createOption("port", "P", "Set server port number"),
                 createOption("ssl", "ssl", "SSL server connection. Default: false")
                     .setFlag(true),
+                createOption(
+                    TRUST_ALL_SSL_CERT,
+                    TRUST_ALL_SSL_CERT,
+                    "Trusts all SSL certificates and bypasses host verification. Use with caution at your own risk."
+                ).setFlag(true),
                 createOption("instanceNum", "I", "Set number of RESTVerticle instances. Default: 4")
                     .setDefaultValue("4"),
                 createOption("workspaceId", "W", "Select workspace to crawl"),
