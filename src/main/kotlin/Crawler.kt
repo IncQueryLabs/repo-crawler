@@ -224,7 +224,7 @@ private fun defineCommandLineInterface(): CLI {
                     .setDefaultValue("2000"),
                 createOption(MAX_HTTP_POOL_SIZE, "MPS", "Number of concurrent requests. Default: 1")
                     .setDefaultValue("1"),
-                createOption(REQUEST_TIMEOUT, "t", "Request timeout. Default: 60 sec").setDefaultValue("60")
+                createOption(REQUEST_TIMEOUT, "t", "Request timeout. Default: 60 sec").setDefaultValue("180")
             )
         )
 }
