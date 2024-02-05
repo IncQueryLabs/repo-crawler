@@ -18,6 +18,7 @@ class RESTVerticle(
     val serverPath = configuration.server.path
     val port = configuration.server.port
     val chunkSize = configuration.chunkSize
+    val timeout = configuration.requestTimeout * 1_000L
 
     override fun start() {
         val twcMap = vertx.sharedData().getLocalMap<Any, Any>(TWCMAP)
@@ -112,6 +113,7 @@ class RESTVerticle(
             .putHeader("content-type", "text/plain")
             .putHeader("Cookie", "${twcMap[USER]}")
             .putHeader("Cookie", "${twcMap[SESSION]}")
+            .timeout(timeout)
             .sendBuffer(Buffer.buffer(elementIds.joinToString(","))) { ar ->
                 if (ar.succeeded()) {
                     if (ar.result().statusCode() == 200) {
@@ -168,16 +170,22 @@ class RESTVerticle(
                         }
                         elementContentHandler.handleContent(data, serverPath, workspaceId, resourceId, branchId, revisionId)
                     } else {
-                        println("getElements: ${ar.result().statusCode()} : ${ar.result().statusMessage()}")
+                        println("Error on requesting elements: ${ar.result().statusCode()} : ${ar.result().statusMessage()}")
+                        printElementIds(elementIds)
                         myError()
                     }
                 } else {
                     println("Query Root Element failed: ${ar.cause().message}")
+                    printElementIds(elementIds)
                     myError()
                 }
 
             }
 
+    }
+
+    private fun printElementIds(elementIds: List<String>) {
+        println("  Element IDs: ${elementIds.joinToString(",")}")
     }
 
     private fun queryPrepared(elementSize: Long) {
@@ -228,6 +236,7 @@ class RESTVerticle(
             .putHeader("content-type", "application/ld+json")
             .putHeader("Cookie", "${twcMap[USER]}")
             .putHeader("Cookie", "${twcMap[SESSION]}")
+            .timeout(timeout)
             .sendJson(JsonObject()) { ar ->
                 if (ar.succeeded()) {
                     if (ar.result().statusCode() == 200) {
@@ -275,6 +284,7 @@ class RESTVerticle(
             .putHeader("content-type", "application/ld+json")
             .putHeader("Cookie", "${twcMap[USER]}")
             .putHeader("Cookie", "${twcMap[SESSION]}")
+            .timeout(timeout)
             .send { ar ->
                 if (ar.succeeded()) {
                     if (ar.result().statusCode() == 200) {
@@ -322,6 +332,7 @@ class RESTVerticle(
             .putHeader("content-type", "application/ld+json")
             .putHeader("Cookie", "${twcMap[USER]}")
             .putHeader("Cookie", "${twcMap[SESSION]}")
+            .timeout(timeout)
             .send { ar ->
                 if (ar.succeeded()) {
                     if (ar.result().statusCode() == 200) {
@@ -370,6 +381,7 @@ class RESTVerticle(
             .putHeader("content-type", "application/ld+json")
             .putHeader("Cookie", "${twcMap[USER]}")
             .putHeader("Cookie", "${twcMap[SESSION]}")
+            .timeout(timeout)
             .send { ar ->
                 if (ar.succeeded()) {
                     if (ar.result().statusCode() == 200) {
@@ -410,6 +422,7 @@ class RESTVerticle(
             .putHeader("content-type", "application/ld+json")
             .putHeader("Cookie", "${twcMap[USER]}")
             .putHeader("Cookie", "${twcMap[SESSION]}")
+            .timeout(timeout)
             .send { ar ->
                 if (ar.succeeded()) {
                     if (ar.result().statusCode() == 200) {
@@ -454,6 +467,7 @@ class RESTVerticle(
             .putHeader("content-type", "application/json")
             .putHeader("Accept", "text/html")
             .putHeader("Authorization", "${twcMap["credential"]}")
+            .timeout(timeout)
             .send { ar ->
                 if (ar.succeeded()) {
                     if (ar.result().statusCode() == 204) {
@@ -496,6 +510,7 @@ class RESTVerticle(
             .putHeader("content-type", "application/ld+json")
             .putHeader("Cookie", "${twcMap[USER]}")
             .putHeader("Cookie", "${twcMap[SESSION]}")
+            .timeout(timeout)
             .send { ar ->
                 if (ar.succeeded()) {
                     if (ar.result().statusCode() == 204) {
@@ -530,7 +545,7 @@ class RESTVerticle(
             .putHeader("content-type", "application/ld+json")
             .putHeader("Cookie", "${twcMap[USER]}")
             .putHeader("Cookie", "${twcMap[SESSION]}")
-            .timeout(2000)
+            .timeout(timeout)
             .send { ar ->
                 if (ar.succeeded()) {
                     if (ar.result().statusCode() == 200) {

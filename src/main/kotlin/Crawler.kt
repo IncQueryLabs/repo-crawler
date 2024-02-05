@@ -1,15 +1,6 @@
 package com.incquerylabs.twc.repo.crawler
 
-import com.incquerylabs.twc.repo.crawler.data.BRANCH_ID
-import com.incquerylabs.twc.repo.crawler.data.CHUNK_SIZE
-import com.incquerylabs.twc.repo.crawler.data.CrawlerConfiguration
-import com.incquerylabs.twc.repo.crawler.data.MAX_HTTP_POOL_SIZE
-import com.incquerylabs.twc.repo.crawler.data.MainConfiguration
-import com.incquerylabs.twc.repo.crawler.data.RESOURCE_ID
-import com.incquerylabs.twc.repo.crawler.data.REVISION
-import com.incquerylabs.twc.repo.crawler.data.Server
-import com.incquerylabs.twc.repo.crawler.data.User
-import com.incquerylabs.twc.repo.crawler.data.WORKSPACE_ID
+import com.incquerylabs.twc.repo.crawler.data.*
 import com.incquerylabs.twc.repo.crawler.integration.ContentHandler
 import com.incquerylabs.twc.repo.crawler.integration.NoopContentHandler
 import com.incquerylabs.twc.repo.crawler.verticles.MainVerticle
@@ -59,12 +50,14 @@ fun executeCrawler(vertx: Vertx, commandLine: CommandLine, cli: CLI, elementCont
     val serverOpt = commandLine.getOptionValue<String>("server")
     val portOpt = commandLine.getOptionValue<String>("port")
     val isSslEnabled = commandLine.isFlagEnabled("ssl")
+    val trustAll = commandLine.isFlagEnabled(TRUST_ALL_SSL_CERT)
     val instanceNum = commandLine.getOptionValue<String>("instanceNum").toInt()
     val workspaceId = commandLine.getOptionValue<String>("workspaceId")
     val resourceId = commandLine.getOptionValue<String>("resourceId")
     val branchId = commandLine.getOptionValue<String>("branchId")
     val revision = commandLine.getOptionValue<String>("revision")
     val chunkSize = commandLine.getOptionValue<String>(CHUNK_SIZE).toInt()
+    val requestTimeout = commandLine.getOptionValue<String>(REQUEST_TIMEOUT).toLong()
     val maxPoolSize = commandLine.getOptionValue<String>(MAX_HTTP_POOL_SIZE).toInt()
     val debug = commandLine.isFlagEnabled("debug")
     val requestSingleElement = commandLine.isFlagEnabled("requestSingleElement")
@@ -159,8 +152,15 @@ fun executeCrawler(vertx: Vertx, commandLine: CommandLine, cli: CLI, elementCont
         debug,
         server,
         User(usr, pswd),
-        WebClientOptions().setSsl(isSslEnabled).setMaxPoolSize(maxPoolSize),
-        chunkSize
+        WebClientOptions().setSsl(isSslEnabled).setMaxPoolSize(maxPoolSize)
+            .also {
+                if (trustAll) {
+                    it.setTrustAll(true)
+                    it.setVerifyHost(false)
+                }
+            },
+        chunkSize,
+        requestTimeout
     )
 
     val restVerticle = RESTVerticle(configuration, elementContentHandler)
@@ -203,6 +203,11 @@ fun defineCommandLineInterface(): CLI {
                 createOption("port", "P", "Set server port number"),
                 createOption("ssl", "ssl", "SSL server connection. Default: false")
                     .setFlag(true),
+                createOption(
+                    TRUST_ALL_SSL_CERT,
+                    TRUST_ALL_SSL_CERT,
+                    "Trusts all SSL certificates and bypasses host verification. Use with caution at your own risk."
+                ).setFlag(true),
                 createOption("instanceNum", "I", "Set number of RESTVerticle instances. Default: 4")
                     .setDefaultValue("4"),
                 createOption("workspaceId", "W", "Select workspace to crawl"),
@@ -220,7 +225,8 @@ fun defineCommandLineInterface(): CLI {
                 )
                     .setDefaultValue("2000"),
                 createOption(MAX_HTTP_POOL_SIZE, "MPS", "Number of concurrent requests. Default: 1")
-                    .setDefaultValue("1")
+                    .setDefaultValue("1"),
+                createOption(REQUEST_TIMEOUT, "t", "Request timeout. Default: 60 sec").setDefaultValue("60")
             )
         )
 }
