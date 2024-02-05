@@ -92,7 +92,6 @@ class RESTVerticle(
 
         }
 
-
     }
 
     private fun getElements(client: WebClient, twcMap: LocalMap<Any, Any>, obj: JsonObject) {
