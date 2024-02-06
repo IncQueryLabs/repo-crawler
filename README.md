@@ -1,3 +1,5 @@
+[![Build Status](https://build.incquerylabs.com/jenkins/buildStatus/icon?job=incquery-suite%2Ftwc-repo-crawler%2Fmaster)](https://build.incquerylabs.com/jenkins/job/incquery-suite/job/twc-repo-crawler/job/master/)
+
 # Repository and revision crawler for Teamwork Cloud
 
 ## Run the crawler
