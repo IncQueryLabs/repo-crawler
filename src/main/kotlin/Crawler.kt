@@ -1,6 +1,8 @@
 package com.incquerylabs.twc.repo.crawler
 
 import com.incquerylabs.twc.repo.crawler.data.*
+import com.incquerylabs.twc.repo.crawler.integration.ContentHandler
+import com.incquerylabs.twc.repo.crawler.integration.NoopContentHandler
 import com.incquerylabs.twc.repo.crawler.verticles.MainVerticle
 import com.incquerylabs.twc.repo.crawler.verticles.RESTVerticle
 import io.vertx.core.DeploymentOptions
@@ -21,7 +23,8 @@ fun main(args: Array<String>) {
     val commandLine = cli.parse(args.asList(), false)
 
     try {
-        executeCrawler(commandLine, cli)
+        val vertx = Vertx.vertx()
+        executeCrawler(vertx, commandLine, cli)
     } catch (e: Exception) {
         println("Exception occurred: $e")
         val builder = StringBuilder()
@@ -31,7 +34,7 @@ fun main(args: Array<String>) {
 
 }
 
-private fun executeCrawler(commandLine: CommandLine, cli: CLI) {
+fun executeCrawler(vertx: Vertx, commandLine: CommandLine, cli: CLI, elementContentHandler: ContentHandler = NoopContentHandler()) {
     if (commandLine.isFlagEnabled("help")) {
         val builder = StringBuilder()
         cli.usage(builder)
@@ -39,7 +42,6 @@ private fun executeCrawler(commandLine: CommandLine, cli: CLI) {
         return
     }
 
-    val vertx = Vertx.vertx()
     val sd = vertx.sharedData()
     val twcMap = sd.getLocalMap<Any, Any>("twcMap")
 
@@ -161,7 +163,7 @@ private fun executeCrawler(commandLine: CommandLine, cli: CLI) {
         requestTimeout
     )
 
-    val restVerticle = RESTVerticle(configuration)
+    val restVerticle = RESTVerticle(configuration, elementContentHandler)
 
     val options = DeploymentOptions().setWorker(true)
 
@@ -186,7 +188,7 @@ private fun executeCrawler(commandLine: CommandLine, cli: CLI) {
     }
 }
 
-private fun defineCommandLineInterface(): CLI {
+fun defineCommandLineInterface(): CLI {
     return CLI.create("crawler")
         .setSummary("A REST Client to query all model element from server.")
         .addOptions(
