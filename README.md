@@ -1,4 +1,4 @@
-# Repository and revision crawler for Teamwork Cloud 19.0
+# Repository and revision crawler for Teamwork Cloud
 
 ## Run the crawler
 
@@ -9,8 +9,8 @@
 
 Running the jar without arguments prints out the usage instructions.
 
-- Running the crawler without workspace, resource, branch and revision will result in crawling the repository structure of the given scope
-- Running the crawler with workspace, resource, branch and revision will result in crawling the model content of the given revision
+- Running the crawler without workspace, resource, branch, and revision will result in crawling the repository structure of the given scope
+- Running the crawler with workspace, resource, branch, and revision will result in crawling the model content of the given revision
 
 ### Repository structure of OpenSE Cookbook workspace on twc.openmbee.org
 
@@ -37,7 +37,7 @@ Running the jar without arguments prints out the usage instructions.
 
 ### IntelliJ IDEA
 
-1. Install `IntelliJ IDEA` with kotlin plugin.
+1. Install `IntelliJ IDEA` with Kotlin plugin.
 1. Open IntelliJ IDEA and open project. `File -> Open.. -> <project_path>` (Select `Gradle` if needed.)
 1. `Build -> Build Project`
 1. `Run -> Run... -> com.incquerylabs.twc.repo.crawler.Crawler.kt` (set arguments in Configuration)
