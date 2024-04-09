@@ -57,17 +57,6 @@ data class Elements(
     val elements: Map<String, String> = mapOf()
 )
 
-data class ElementContainer(
-    val name: String = "undefined",
-    val type: String = "",
-    val serverID: String = "",
-    val mdID: String = ""
-) {
-    override fun toString(): String {
-        return "[MDObjID: ${mdID}, name: $name, type: $type, serverID: $serverID]"
-    }
-}
-
 const val REPO = "repo"
 const val WORKSPACE = "workspace"
 const val WORKSPACE_ID = "workspace_id"
