@@ -37,7 +37,7 @@ data class Revision(
     val branch_id: String = "",
     val resource_id: String = "",
     val workspace_id: String = "",
-    val elements: List<Any?> = emptyList()
+    val elements: List<String> = emptyList()
 )
 
 data class Element(
@@ -54,8 +54,19 @@ data class Elements(
     val branch_id: String = "",
     val resource_id: String = "",
     val workspace_id: String = "",
-    val elements: List<Any?> = emptyList()
+    val elements: Map<String, String> = mapOf()
 )
+
+data class ElementContainer(
+    val name: String = "undefined",
+    val type: String = "",
+    val serverID: String = "",
+    val mdID: String = ""
+) {
+    override fun toString(): String {
+        return "[MDObjID: ${mdID}, name: $name, type: $type, serverID: $serverID]"
+    }
+}
 
 const val REPO = "repo"
 const val WORKSPACE = "workspace"
@@ -73,6 +84,7 @@ const val ELEMENTS = "elements"
 const val ELEMENT_IDS = "element_ids"
 const val ELEMENT = "element"
 const val ELEMENT_ID = "element_id"
+const val CONTAINERS = "containers"
 
 const val GET_WORKSPACES = "getWorkspaces"
 const val GET_RESOURCES = "getResources"

@@ -322,7 +322,7 @@ class MainVerticle(
                     if (revisionId == inputRevision) {
                         if (requestSingleElements) {
                             revision.elements.forEach { element ->
-                                val elemId = element as String
+                                val elemId = element
                                 vertx.eventBus().send(
                                     TWCVERT_ADDRESS, JsonObject.mapFrom(
                                         Message(
@@ -353,7 +353,7 @@ class MainVerticle(
                                 )
                             }
                         } else {
-                            val elementIds = revision.elements
+                            val elementIds = revision.elements.map { Pair(it, "") }.toMap()
                             vertx.eventBus().send(
                                 TWCVERT_ADDRESS, JsonObject.mapFrom(
                                     Message(
@@ -433,9 +433,7 @@ class MainVerticle(
                     val branchId = elements.branch_id
                     val resourceId = elements.resource_id
                     val workspaceId = elements.workspace_id
-                    val elementIds = elements.elements.map { element ->
-                        JsonObject.mapFrom(element).getString("@id")
-                    }
+                    val elementIds = elements.elements
                     vertx.eventBus().send(
                         TWCVERT_ADDRESS, JsonObject.mapFrom(
                             Message(
