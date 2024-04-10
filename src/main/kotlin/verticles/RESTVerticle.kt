@@ -101,9 +101,13 @@ class RESTVerticle(
         val resourceId = obj.getString(RESOURCE_ID)
         val branchId = obj.getString(BRANCH_ID)
         val revisionId = obj.getInteger(REVISION_ID)
-        val elementIds = obj.getJsonArray(ELEMENT_IDS).map { it.toString().trim('"') }
-        val elementSize = elementIds.size.toLong()
+        val elementIDToParentPath = (obj.getJsonObject(ELEMENT_IDS) as Iterable<MutableMap.MutableEntry<String, Any>>)
+            .associate { Pair(it.key, it.value) }
+            .mapKeys { e -> e.key.trim('"') }
+            .mapValues { e -> e.value.toString() }
+        val elementSize = elementIDToParentPath.size.toLong()
         queryPrepared(elementSize)
+        val requestData = elementIDToParentPath.keys.joinToString(",") { it }
 
         client.post(
             port, serverPath,
@@ -113,19 +117,32 @@ class RESTVerticle(
             .putHeader("Cookie", "${twcMap[USER]}")
             .putHeader("Cookie", "${twcMap[SESSION]}")
             .timeout(timeout)
-            .sendBuffer(Buffer.buffer(elementIds.joinToString(","))) { ar ->
+            .sendBuffer(Buffer.buffer(requestData)) { ar ->
                 if (ar.succeeded()) {
                     if (ar.result().statusCode() == 200) {
 
                         val data = ar.result().bodyAsJsonObject()
 
                         queryCompleted(elementSize)
-                        val containedElements = elementIds.flatMap { elementId ->
-                            val element = data.getJsonObject(elementId).getJsonArray("data")
-                            element.getJsonObject(0).getJsonArray("ldp:contains")
+                        val containedElements = elementIDToParentPath.keys.flatMap { elementId ->
+                            val element = data.getJsonObject(elementId)
+                            val elementData = element.getJsonArray("data")
+                            val elementStatus = element.getInteger("status")
+                            val childElements = elementData.getJsonObject(0).getJsonArray("ldp:contains").map {
+                                JsonObject.mapFrom(it).getString("@id")
+                            }
+                            if(elementStatus != 200 ) {
+                                println("Unexpected status code ($elementStatus) was returned on fetching element details. Element server ID: $elementId, parent: ${elementIDToParentPath[elementId]}")
+                            }
+                            val parentName = elementData.getJsonObject(1).getString("kerml:name")
+                            val parentType = elementData.getJsonObject(1).getString("@type")
+                            val parentSegment = "$parentName (type: $parentType)"
+                            childElements.map { childId -> Pair(childId, "${elementIDToParentPath.getOrDefault(elementId, "")} / $parentSegment") }
                         }
+
                         if (containedElements.isNotEmpty()) {
                             if (chunkSize > 1) {
+                                println("First element in chunk: ${containedElements.first().first} is a child of ${containedElements.first().second}")
                                 containedElements.withIndex().groupBy {
                                     it.index / chunkSize
                                 }.values.map { it.map {
@@ -135,7 +152,7 @@ class RESTVerticle(
                                         branchId,
                                         resourceId,
                                         workspaceId,
-                                        chunkList
+                                        chunkList.toMap()
                                     )
                                     vertx.eventBus().send(
                                         TWCMAIN_ADDRESS,
@@ -154,7 +171,7 @@ class RESTVerticle(
                                         branchId,
                                         resourceId,
                                         workspaceId,
-                                        containedElements
+                                        containedElements.toMap()
                                     )
                                 vertx.eventBus().send(
                                     TWCMAIN_ADDRESS,
@@ -170,12 +187,12 @@ class RESTVerticle(
                         elementContentHandler.handleContent(data, serverPath, workspaceId, resourceId, branchId, revisionId)
                     } else {
                         println("Error on requesting elements: ${ar.result().statusCode()} : ${ar.result().statusMessage()}")
-                        printElementIds(elementIds)
+                        printElementIds(elementIDToParentPath.keys.toList())
                         myError()
                     }
                 } else {
                     println("Query Root Element failed: ${ar.cause().message}")
-                    printElementIds(elementIds)
+                    printElementIds(elementIDToParentPath.keys.toList())
                     myError()
                 }
 
@@ -292,7 +309,7 @@ class RESTVerticle(
                         //println(data)
                         val revision = Revision(
                             revId, branchId, resourceId, workspaceId,
-                            data.getJsonObject(0).getJsonArray("rootObjectIDs").list
+                            data.getJsonObject(0).getJsonArray("rootObjectIDs").list.map { it.toString() }
                         )
                         //println(revision)
                         vertx.eventBus().send(

@@ -37,7 +37,7 @@ data class Revision(
     val branch_id: String = "",
     val resource_id: String = "",
     val workspace_id: String = "",
-    val elements: List<Any?> = emptyList()
+    val elements: List<String> = emptyList()
 )
 
 data class Element(
@@ -54,7 +54,7 @@ data class Elements(
     val branch_id: String = "",
     val resource_id: String = "",
     val workspace_id: String = "",
-    val elements: List<Any?> = emptyList()
+    val elements: Map<String, String> = mapOf()
 )
 
 const val REPO = "repo"
