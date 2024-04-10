@@ -101,13 +101,13 @@ class RESTVerticle(
         val resourceId = obj.getString(RESOURCE_ID)
         val branchId = obj.getString(BRANCH_ID)
         val revisionId = obj.getInteger(REVISION_ID)
-        val elementIds = (obj.getJsonObject(ELEMENT_IDS) as Iterable<MutableMap.MutableEntry<String, Any>>)
+        val elementIDToParentPath = (obj.getJsonObject(ELEMENT_IDS) as Iterable<MutableMap.MutableEntry<String, Any>>)
             .associate { Pair(it.key, it.value) }
             .mapKeys { e -> e.key.trim('"') }
             .mapValues { e -> e.value.toString() }
-        val elementSize = elementIds.size.toLong()
+        val elementSize = elementIDToParentPath.size.toLong()
         queryPrepared(elementSize)
-        val requestData = elementIds.keys.joinToString(",") { it }
+        val requestData = elementIDToParentPath.keys.joinToString(",") { it }
 
         client.post(
             port, serverPath,
@@ -124,7 +124,7 @@ class RESTVerticle(
                         val data = ar.result().bodyAsJsonObject()
 
                         queryCompleted(elementSize)
-                        val containedElements = elementIds.keys.flatMap { elementId ->
+                        val containedElements = elementIDToParentPath.keys.flatMap { elementId ->
                             val element = data.getJsonObject(elementId)
                             val elementData = element.getJsonArray("data")
                             val elementStatus = element.getInteger("status")
@@ -132,12 +132,12 @@ class RESTVerticle(
                                 JsonObject.mapFrom(it).getString("@id")
                             }
                             if(elementStatus != 200 ) {
-                                println("Unexpected status code on fetching element details. ID: $elementId, parent: ${elementIds[elementId]}")
+                                println("Unexpected status code ($elementStatus) was returned on fetching element details. Element server ID: $elementId, parent: ${elementIDToParentPath[elementId]}")
                             }
                             val parentName = elementData.getJsonObject(1).getString("kerml:name")
                             val parentType = elementData.getJsonObject(1).getString("@type")
                             val parentSegment = "$parentName (type: $parentType)"
-                            childElements.map { childId -> Pair(childId, "${elementIds.getOrDefault(elementId, "")} / $parentSegment") }
+                            childElements.map { childId -> Pair(childId, "${elementIDToParentPath.getOrDefault(elementId, "")} / $parentSegment") }
                         }
 
                         if (containedElements.isNotEmpty()) {
@@ -187,12 +187,12 @@ class RESTVerticle(
                         elementContentHandler.handleContent(data, serverPath, workspaceId, resourceId, branchId, revisionId)
                     } else {
                         println("Error on requesting elements: ${ar.result().statusCode()} : ${ar.result().statusMessage()}")
-                        printElementIds(elementIds.keys.toList())
+                        printElementIds(elementIDToParentPath.keys.toList())
                         myError()
                     }
                 } else {
                     println("Query Root Element failed: ${ar.cause().message}")
-                    printElementIds(elementIds.keys.toList())
+                    printElementIds(elementIDToParentPath.keys.toList())
                     myError()
                 }
 

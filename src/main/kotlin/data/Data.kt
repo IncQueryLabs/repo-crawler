@@ -73,7 +73,6 @@ const val ELEMENTS = "elements"
 const val ELEMENT_IDS = "element_ids"
 const val ELEMENT = "element"
 const val ELEMENT_ID = "element_id"
-const val CONTAINERS = "containers"
 
 const val GET_WORKSPACES = "getWorkspaces"
 const val GET_RESOURCES = "getResources"
