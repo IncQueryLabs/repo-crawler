@@ -33,6 +33,10 @@ Running the jar without arguments prints out the usage instructions.
   - You can add `-Djavax.net.debug=all` to check whether Java loaded the certificate correctly
 - Make sure that `ssl` is enabled in CLI arguments
 
+## Bypass host verification and trust all certificates by default
+
+At your own risk you can use the `--trustAll` option to disable validation.
+
 ## Running from source
 
 1. Clone this repository or download the sources for a [release](https://github.com/IncQueryLabs/repo-crawler/releases).

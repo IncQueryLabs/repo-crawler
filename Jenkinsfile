@@ -46,7 +46,7 @@ pipeline {
                 expression { params.RELEASE == true }
             }
             steps {
-                sh "./gradlew clean collectGithubRelease -Prelease=true"
+                sh "./gradlew clean collectGithubRelease  "
                 withCredentials([usernamePassword(
                         credentialsId: 'github-access-token',
                         passwordVariable: 'GITHUB_RELEASE_TOKEN',
