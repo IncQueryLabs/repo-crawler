@@ -15,6 +15,7 @@ class RESTVerticle(
     val elementContentHandler: ContentHandler
 ) : AbstractVerticle() {
 
+
     val serverPath = configuration.server.path
     val port = configuration.server.port
     val chunkSize = configuration.chunkSize
@@ -125,19 +126,7 @@ class RESTVerticle(
 
                         queryCompleted(elementSize)
                         val containedElements = elementIDToParentPath.keys.flatMap { elementId ->
-                            val element = data.getJsonObject(elementId)
-                            val elementData = element.getJsonArray("data")
-                            val elementStatus = element.getInteger("status")
-                            val childElements = elementData.getJsonObject(0).getJsonArray("ldp:contains").map {
-                                JsonObject.mapFrom(it).getString("@id")
-                            }
-                            if(elementStatus != 200 ) {
-                                println("Unexpected status code ($elementStatus) was returned on fetching element details. Element server ID: $elementId, parent: ${elementIDToParentPath[elementId]}")
-                            }
-                            val parentName = elementData.getJsonObject(1).getString("kerml:name")
-                            val parentType = elementData.getJsonObject(1).getString("@type")
-                            val parentSegment = "$parentName (type: $parentType)"
-                            childElements.map { childId -> Pair(childId, "${elementIDToParentPath.getOrDefault(elementId, "")} / $parentSegment") }
+                            parseContainedElements(elementId, data, elementIDToParentPath)
                         }
 
                         if (containedElements.isNotEmpty()) {
@@ -198,6 +187,51 @@ class RESTVerticle(
 
             }
 
+    }
+
+    private fun parseContainedElements(elementId: String, data: JsonObject, elementIDToParentPath: Map<String, String>): List<Pair<String, String>> {
+
+        val element = safeReadKey(elementId, data, data::getJsonObject)
+        val elementStatus = safeReadKey("status", element, element!!::getInteger)
+
+        if(elementStatus == null || elementStatus != 200 ) {
+            println("Unexpected status code ($elementStatus) was returned on fetching element details. Element server ID: $elementId, parent: ${elementIDToParentPath[elementId]}")
+        }
+
+        val elementData = safeReadKey("data", element, element::getJsonArray)
+
+        return if (elementData != null && !elementData.isEmpty) {
+            val firstData = elementData.getJsonObject(0)
+            val childElements = safeReadKey("ldp:contains", firstData, firstData::getJsonArray)?.map {
+                JsonObject.mapFrom(it).getString("@id")
+            }
+            if(elementData.size() > 1) {
+                val secondData = elementData.getJsonObject(1)
+                val parentName = safeReadKey("kerml:name", secondData, secondData!!::getString)
+                val parentType = safeReadKey("@type", secondData, secondData::getString)
+                val parentSegment = "$parentName (type: $parentType)"
+                return childElements?.map { childId -> Pair(childId, "${elementIDToParentPath.getOrDefault(elementId, "")} / $parentSegment") } ?: listOf()
+            } else {
+                println("Unable to name and type of the element. Raw data: \n ${data.encodePrettily()}")
+                listOf()
+            }
+
+        } else {
+            println("Unable to read child elements of empty element data. Parent: \n ${data.encodePrettily()}")
+            listOf()
+        }
+    }
+
+    private fun <T> safeReadKey(key: String, obj: JsonObject?, method: (String) -> T): T? {
+        return if (obj == null ) {
+            println("Unable to read $key data, object not exists.")
+            null
+        } else if(obj.containsKey(key)) {
+            method.invoke(key)
+        } else {
+            println("Unable to read object data $method with $key key: \n ${obj.encodePrettily()}")
+            null
+        }
     }
 
     private fun printElementIds(elementIds: List<String>) {
