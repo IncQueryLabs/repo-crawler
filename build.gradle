@@ -13,7 +13,7 @@ ext.jacksonDatabindVersion = findProperty("jacksonDatabindVersion") ?: '2.15.3'
 
 ext {
     buildTimestamp = timestampFormat.format(buildTime)
-    baseVersion = '1.3'
+    baseVersion = '1.3.1'
 }
 
 def computedVersion = baseVersion + '-' + buildTimestamp
