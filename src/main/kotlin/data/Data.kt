@@ -13,7 +13,9 @@ data class CrawlerConfiguration(
 
 data class MainConfiguration(
     val user: User,
-    val requestSingleElement: Boolean
+    val requestSingleElement: Boolean,
+    val changeLogInterval: Int = 10,
+    val infoLogInterval: Int = 60
 )
 
 data class Message(val event: String = "", val obj: Any = "")

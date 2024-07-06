@@ -3,14 +3,19 @@ package com.incquerylabs.twc.repo.crawler.verticles
 import com.incquerylabs.twc.repo.crawler.data.*
 import io.vertx.core.AbstractVerticle
 import io.vertx.core.json.JsonObject
+import mu.KLogger
+import mu.KLogging
+import mu.KotlinLogging
 
 class MainVerticle(
     val configuration: MainConfiguration
 ) : AbstractVerticle() {
     var sum = 0
     var number = 0
-    var s = 0
+    var s = 0L
     var queries = 0
+
+    val logger = KotlinLogging.logger("Main")
 
     override fun start() {
         val twcMap = vertx.sharedData().getLocalMap<Any, Any>(TWCMAP)
@@ -37,9 +42,16 @@ class MainVerticle(
                                                 numC.get { numV ->
                                                     if (numV.succeeded()) {
                                                         number = numV.result().toInt()
-                                                        println("Total: ${this.queries}/${this.sum}/${++s} query/response/sec | Now: $number elem | AvgSpeed: ${this.sum / (s)} elem/sec")
-                                                        numC.compareAndSet(number.toLong(), 0, {})
-
+                                                        val msg = "Total: ${this.queries}/${this.sum}/${++s} query/response/sec | Now: $number elem | AvgSpeed: ${this.sum / (s)} elem/sec"
+                                                        if (s % configuration.infoLogInterval == 0L) {
+                                                            logger.info(msg)
+                                                            numC.compareAndSet(number.toLong(), 0, {})
+                                                        } else if ( number == 0 && logger.isDebugEnabled) {
+                                                            logger.debug(msg)
+                                                        } else if (s % configuration.changeLogInterval == 0L) {
+                                                            logger.info(msg)
+                                                            numC.compareAndSet(number.toLong(), 0, {})
+                                                        }
                                                         if (this.queries != 0 && this.sum != 0 && this.queries == this.sum) {
                                                             eb.send(
                                                                 TWCVERT_ADDRESS,
@@ -85,7 +97,7 @@ class MainVerticle(
 
             when (messageData.event) {
                 LOGGED_IN -> {
-                    println("Login complete (user: ${twcMap[USER]}, session:  ${twcMap[SESSION]})")
+                    logger.info("Login complete (user: ${twcMap[USER]}, session:  ${twcMap[SESSION]})")
 
                     val workspaceId = twcMap[WORKSPACE_ID]
                     val resourceId = twcMap[RESOURCE_ID]
@@ -178,10 +190,10 @@ class MainVerticle(
                 }
                 REPO -> {
                     val repo = JsonObject(messageData.obj as Map<String, Any>).mapTo(Repo::class.java)
-                    println("Received workspaces of repository:")
+                    logger.info("Received workspaces of repository:")
                     repo.workspaces.forEach { ws ->
                         val id = JsonObject(ws as Map<String, Any>).getString("@id")
-                        println("\t * $id")
+                        logger.info("\t * $id")
                         eb.send(
                             TWCVERT_ADDRESS,
                             JsonObject.mapFrom(
@@ -200,12 +212,12 @@ class MainVerticle(
                     val workspace = JsonObject(messageData.obj as Map<String, Any>).mapTo(Workspace::class.java)
                     val workspaceId = workspace.id
                     val workspaceTitle = workspace.title
-                    println("Received resources of workspace $workspaceTitle (id: $workspaceId):")
+                    logger.info("Received resources of workspace $workspaceTitle (id: $workspaceId):")
 
                     workspace.resources.forEach { res ->
                         val resourceId = JsonObject(res as Map<String, Any>).getString("ID")
                         val resourceTitle = JsonObject(res as Map<String, Any>).getString("dcterms:title")
-                        println("\t * $resourceTitle (id: $resourceId)")
+                        logger.info("\t * $resourceTitle (id: $resourceId)")
                         eb.send(
                             TWCVERT_ADDRESS, JsonObject.mapFrom(
                                 Message(
@@ -237,10 +249,10 @@ class MainVerticle(
                     val resourceTitle = resource.title
                     val workspaceId = resource.workspace_id
                     val workspaceTitle = resource.workspace_title
-                    println("Received branches of resource $resourceTitle (id: $resourceId) in workpace $workspaceTitle (id: $workspaceId):")
+                    logger.info("Received branches of resource $resourceTitle (id: $resourceId) in workpace $workspaceTitle (id: $workspaceId):")
                     resource.branches.forEach { branch ->
                         val branchId = JsonObject(branch as Map<String, Any>).getString("@id")
-                        println("\t * $branchId")
+                        logger.info("\t * $branchId")
                         eb.send(
                             TWCVERT_ADDRESS, JsonObject.mapFrom(
                                 Message(
@@ -274,10 +286,10 @@ class MainVerticle(
                     val branchId = branch.id
                     val resourceId = branch.resource_id
                     val workspaceId = branch.workspace_id
-                    println("Received revisions of branch ${branch.title} (id: $branchId) in resorce " +
+                    logger.info("Received revisions of branch ${branch.title} (id: $branchId) in resorce " +
                             "${branch.resource_title} (id: $resourceId) in workspace " +
                             "${branch.workspace_title} (id: $workspaceId):")
-                    println("\t * ${branch.revisions}")
+                    logger.info("\t * ${branch.revisions}")
 
                     branch.revisions.forEach { rev ->
                         val revId = (rev as Int)
@@ -313,7 +325,7 @@ class MainVerticle(
                 }
                 REVISION -> {
                     val revision = JsonObject(messageData.obj as Map<String, Any>).mapTo(Revision::class.java)
-                    println("Received revision content for $revision")
+                    logger.info("Received revision content for $revision")
                     val revisionId = revision.id
                     val branchId = revision.branch_id
                     val resourceId = revision.resource_id
@@ -427,7 +439,7 @@ class MainVerticle(
                     }
                 }
                 ELEMENTS -> {
-                    //                    println("Received Elements")
+                    //                    logger.info("Received Elements")
                     val elements = JsonObject(messageData.obj as Map<String, Any>).mapTo(Elements::class.java)
                     val revisionId = elements.revision_id
                     val branchId = elements.branch_id
@@ -464,7 +476,7 @@ class MainVerticle(
                     )
                 }
                 ERROR -> {
-                    println("\nExit")
+                    logger.info("\nExit")
                     if (twcMap["cookies"] != null) {
                         eb.send(
                             TWCVERT_ADDRESS,
@@ -479,7 +491,7 @@ class MainVerticle(
                     vertx.close()
                 }
                 EXIT -> {
-                    println("\nExit")
+                    logger.info("\nExit")
                     if (twcMap["cookies"] != null) {
                         eb.send(
                             TWCVERT_ADDRESS,
