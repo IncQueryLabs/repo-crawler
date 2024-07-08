@@ -7,6 +7,7 @@ import io.vertx.core.buffer.Buffer
 import io.vertx.core.json.JsonObject
 import io.vertx.core.shareddata.LocalMap
 import io.vertx.ext.web.client.WebClient
+import mu.KotlinLogging
 import java.io.File
 
 
@@ -15,10 +16,13 @@ class RESTVerticle(
     val elementContentHandler: ContentHandler
 ) : AbstractVerticle() {
 
+
     val serverPath = configuration.server.path
     val port = configuration.server.port
     val chunkSize = configuration.chunkSize
     val timeout = configuration.requestTimeout * 1_000L
+
+    val logger = KotlinLogging.logger("Crawler")
 
     override fun start() {
         val twcMap = vertx.sharedData().getLocalMap<Any, Any>(TWCMAP)
@@ -32,60 +36,60 @@ class RESTVerticle(
 
             when (json.getString("event")) {
                 LOGIN -> {
-                    println("Try to login. Username: ${json.getJsonObject("obj").getString("username")}")
-                    //println(obj)
+                    logger.info("Try to login. Username: ${json.getJsonObject("obj").getString("username")}")
+                    logger.trace(obj.encodePrettily())
                     login(client, twcMap)
                 }
                 LOGOUT -> {
-                    println("Log out")
+                    logger.info("Log out")
                     logout(client, twcMap)
                 }
                 GET_WORKSPACES -> {
                     if (debug) {
-                        println("Query Workspaces")
-                        println(obj)
+                        logger.debug("Query Workspaces")
+                        logger.debug(obj.encodePrettily())
                     }
                     getWorkspaces(client, twcMap)
                 }
                 GET_RESOURCES -> {
                     if (debug) {
-                        println("Query Resources")
-                        println(obj)
+                        logger.debug("Query Resources")
+                        logger.debug(obj.encodePrettily())
                     }
                     getResources(client, twcMap, obj)
                 }
                 GET_BRANCHES -> {
                     if (debug) {
-                        println("Query Branches")
-                        println(obj)
+                        logger.debug("Query Branches")
+                        logger.debug(obj.encodePrettily())
                     }
                     getBranches(client, twcMap, obj)
                 }
                 GET_REVISIONS -> {
                     if (debug) {
-                        println("Query Revisions")
-                        println(obj)
+                        logger.debug("Query Revisions")
+                        logger.debug(obj.encodePrettily())
                     }
                     getRevisions(client, twcMap, obj)
                 }
                 GET_ROOT_ELEMENT_IDS -> {
                     if (debug) {
-                        println("Search Root Element Ids")
-                        println(obj)
+                        logger.debug("Search Root Element Ids")
+                        logger.debug(obj.encodePrettily())
                     }
                     getRootElementIds(client, twcMap, obj)
                 }
                 GET_ELEMENT -> {
                     if (debug) {
-                        println("Query Element")
-                        println(obj)
+                        logger.debug("Query Element")
+                        logger.debug(obj.encodePrettily())
                     }
                     getElement(client, twcMap, obj)
                 }
                 GET_ELEMENTS -> {
                     if (debug) {
-                        println("Query Elements")
-                        println(obj)
+                        logger.debug("Query Elements")
+                        logger.debug(obj.encodePrettily())
                     }
                     getElements(client, twcMap, obj)
                 }
@@ -125,24 +129,12 @@ class RESTVerticle(
 
                         queryCompleted(elementSize)
                         val containedElements = elementIDToParentPath.keys.flatMap { elementId ->
-                            val element = data.getJsonObject(elementId)
-                            val elementData = element.getJsonArray("data")
-                            val elementStatus = element.getInteger("status")
-                            val childElements = elementData.getJsonObject(0).getJsonArray("ldp:contains").map {
-                                JsonObject.mapFrom(it).getString("@id")
-                            }
-                            if(elementStatus != 200 ) {
-                                println("Unexpected status code ($elementStatus) was returned on fetching element details. Element server ID: $elementId, parent: ${elementIDToParentPath[elementId]}")
-                            }
-                            val parentName = elementData.getJsonObject(1).getString("kerml:name")
-                            val parentType = elementData.getJsonObject(1).getString("@type")
-                            val parentSegment = "$parentName (type: $parentType)"
-                            childElements.map { childId -> Pair(childId, "${elementIDToParentPath.getOrDefault(elementId, "")} / $parentSegment") }
+                            parseContainedElements(elementId, data, elementIDToParentPath)
                         }
 
                         if (containedElements.isNotEmpty()) {
                             if (chunkSize > 1) {
-                                println("First element in chunk: ${containedElements.first().first} is a child of ${containedElements.first().second}")
+                                logger.info("First element in chunk: ${containedElements.first().first} is a child of ${containedElements.first().second}")
                                 containedElements.withIndex().groupBy {
                                     it.index / chunkSize
                                 }.values.map { it.map {
@@ -186,12 +178,12 @@ class RESTVerticle(
                         }
                         elementContentHandler.handleContent(data, serverPath, workspaceId, resourceId, branchId, revisionId)
                     } else {
-                        println("Error on requesting elements: ${ar.result().statusCode()} : ${ar.result().statusMessage()}")
+                        logger.info("Error on requesting elements: ${ar.result().statusCode()} : ${ar.result().statusMessage()}")
                         printElementIds(elementIDToParentPath.keys.toList())
                         myError()
                     }
                 } else {
-                    println("Query Root Element failed: ${ar.cause().message}")
+                    logger.info("Query Root Element failed: ${ar.cause().message}")
                     printElementIds(elementIDToParentPath.keys.toList())
                     myError()
                 }
@@ -200,8 +192,58 @@ class RESTVerticle(
 
     }
 
+    private fun parseContainedElements(elementId: String, data: JsonObject, elementIDToParentPath: Map<String, String>): List<Pair<String, String>> {
+
+        val parentFQN = elementIDToParentPath[elementId] ?: "unknown"
+        val element = safeReadKey(elementId, data, data::getJsonObject)
+        if (element == null) {
+            logger.error("Element details cannot be parsed from the response. Element ID: $elementId; parent FQN: $parentFQN \n Response: \n ${data.encodePrettily()}")
+            return listOf()
+        }
+        val elementStatus = safeReadKey("status", element, element::getInteger)
+        if(elementStatus == null || elementStatus != 200 ) {
+            logger.error("Unexpected status code ($elementStatus) was returned on fetching element details. Element server ID: $elementId, parent FQN: $parentFQN")
+            return listOf()
+        }
+
+        val elementData = safeReadKey("data", element, element::getJsonArray)
+
+        return if (elementData != null && !elementData.isEmpty) {
+            val firstData = elementData.getJsonObject(0)
+            val childElements = safeReadKey("ldp:contains", firstData, firstData::getJsonArray)?.map {
+                JsonObject.mapFrom(it).getString("@id")
+            }
+            if(elementData.size() > 1) {
+                val secondData = elementData.getJsonObject(1)
+                val parentName = safeReadKey("kerml:name", secondData, secondData::getString)
+                val parentType = safeReadKey("@type", secondData, secondData::getString)
+                val parentSegment = "$parentName (id: $elementId, type: $parentType)"
+                return childElements?.map { childId -> Pair(childId, "${elementIDToParentPath.getOrDefault(elementId, "")} / $parentSegment") } ?: listOf()
+            } else {
+                logger.error("Unable to get name and type of the element. \n ${elementData.encodePrettily()} \n Parent data: \n ${data.encodePrettily()} \n Parent FQN: $parentFQN")
+                listOf()
+            }
+
+        } else {
+            logger.error("Unable to read child elements of empty element data: \n ${element.encodePrettily()} \n Parent data: \n ${data.encodePrettily()} \n Parent FQN: $parentFQN")
+            listOf()
+        }
+    }
+
+    private fun <T> safeReadKey(key: String, obj: JsonObject?, method: (String) -> T): T? {
+        return if (obj == null ) {
+            logger.info("Unable to read $key data, object not exists.")
+            null
+        } else if(obj.containsKey(key)) {
+            method.invoke(key)
+        } else {
+            logger.info("Unable to read object data $method with $key key: \n ${obj.encodePrettily()}")
+            null
+        }
+    }
+
     private fun printElementIds(elementIds: List<String>) {
-        println("  Element IDs: ${elementIds.joinToString(",")}")
+        logger.info("  Element IDs: ${elementIds.joinToString(",")}")
     }
 
     private fun queryPrepared(elementSize: Long) {
@@ -277,11 +319,11 @@ class RESTVerticle(
                         )
 
                     } else {
-                        println("getRootElement: ${ar.result().statusCode()} : ${ar.result().statusMessage()}")
+                        logger.info("getRootElement: ${ar.result().statusCode()} : ${ar.result().statusMessage()}")
                         myError()
                     }
                 } else {
-                    println("Query Root Element failed: ${ar.cause().message}")
+                    logger.info("Query Root Element failed: ${ar.cause().message}")
                     myError()
                 }
 
@@ -306,12 +348,12 @@ class RESTVerticle(
                     if (ar.result().statusCode() == 200) {
 
                         val data = ar.result().bodyAsJsonArray()
-                        //println(data)
+                        //logger.info(data)
                         val revision = Revision(
                             revId, branchId, resourceId, workspaceId,
                             data.getJsonObject(0).getJsonArray("rootObjectIDs").list.map { it.toString() }
                         )
-                        //println(revision)
+                        //logger.info(revision)
                         vertx.eventBus().send(
                             TWCMAIN_ADDRESS,
                             JsonObject.mapFrom(
@@ -323,11 +365,11 @@ class RESTVerticle(
                         )
 
                     } else {
-                        println("getRootElementIds: ${ar.result().statusCode()} : ${ar.result().statusMessage()}")
+                        logger.info("getRootElementIds: ${ar.result().statusCode()} : ${ar.result().statusMessage()}")
                         myError()
                     }
                 } else {
-                    println("Query Root Element IDs failed: ${ar.cause().message}")
+                    logger.info("Query Root Element IDs failed: ${ar.cause().message}")
                     myError()
                 }
 
@@ -363,7 +405,7 @@ class RESTVerticle(
                             workspaceTitle,
                             data.getJsonObject(0).getJsonArray("ldp:contains").list
                         )
-                        //println(resource)
+                        //logger.info(resource)
                         vertx.eventBus().send(
                             TWCMAIN_ADDRESS,
                             JsonObject.mapFrom(
@@ -375,11 +417,11 @@ class RESTVerticle(
                         )
 
                     } else {
-                        println("${ar.result().statusCode()} : ${ar.result().statusMessage()}")
+                        logger.info("${ar.result().statusCode()} : ${ar.result().statusMessage()}")
                         myError()
                     }
                 } else {
-                    println("Query Revisions failed: ${ar.cause().message}")
+                    logger.info("Query Revisions failed: ${ar.cause().message}")
                     myError()
                 }
 
@@ -409,7 +451,7 @@ class RESTVerticle(
                             workspaceTitle,
                             data.getJsonArray("ldp:contains").list
                         )
-                        //println(resource)
+                        //logger.info(resource)
                         vertx.eventBus().send(
                             TWCMAIN_ADDRESS,
                             JsonObject.mapFrom(
@@ -421,11 +463,11 @@ class RESTVerticle(
                         )
 
                     } else {
-                        println("${ar.result().statusCode()} : ${ar.result().statusMessage()}")
+                        logger.info("${ar.result().statusCode()} : ${ar.result().statusMessage()}")
                         myError()
                     }
                 } else {
-                    println("Query Branches failed: ${ar.cause().message}")
+                    logger.info("Query Branches failed: ${ar.cause().message}")
                     myError()
                 }
 
@@ -456,7 +498,7 @@ class RESTVerticle(
                             data.getJsonObject(1).getString("dcterms:title"),
                             resources
                         )
-                        //println(workspace)
+                        //logger.info(workspace)
                         vertx.eventBus().send(
                             TWCMAIN_ADDRESS,
                             JsonObject.mapFrom(
@@ -468,11 +510,11 @@ class RESTVerticle(
                         )
 
                     } else {
-                        println("${ar.result().statusCode()} : ${ar.result().statusMessage()}")
+                        logger.info("${ar.result().statusCode()} : ${ar.result().statusMessage()}")
                         myError()
                     }
                 } else {
-                    println("Query Resources failed: ${ar.cause().message}")
+                    logger.info("Query Resources failed: ${ar.cause().message}")
                     myError()
                 }
             }
@@ -498,7 +540,7 @@ class RESTVerticle(
                             user: $userCookie
                             session: $sessionCookie
                         """.trimIndent())
-                        println("Session details written to: $sessionFile")
+                        logger.info("Session details written to: $sessionFile")
                         vertx.eventBus().send(
                             TWCMAIN_ADDRESS,
                             JsonObject.mapFrom(
@@ -509,13 +551,13 @@ class RESTVerticle(
                             )
                         )
                     } else {
-                        println("${ar.result().statusCode()} : ${ar.result().statusMessage()}")
+                        logger.info("${ar.result().statusCode()} : ${ar.result().statusMessage()}")
                         myError()
                     }
 
                 } else {
                     ar.cause().printStackTrace()
-                    println("Login failed: ${ar.cause().message}")
+                    logger.info("Login failed: ${ar.cause().message}")
                     myError()
                 }
             }
@@ -532,7 +574,7 @@ class RESTVerticle(
                     if (ar.result().statusCode() == 204) {
                         twcMap.remove("cookies")
                         val sessionFile = twcMap["sessionFile"] as String
-                        println("Logout successful, deleting session file $sessionFile")
+                        logger.info("Logout successful, deleting session file $sessionFile")
                         File(sessionFile).deleteOnExit()
                         vertx.eventBus().send(
                             TWCMAIN_ADDRESS,
@@ -544,13 +586,13 @@ class RESTVerticle(
                             )
                         )
                     } else {
-                        println("${ar.result().statusCode()} : ${ar.result().statusMessage()}")
+                        logger.info("${ar.result().statusCode()} : ${ar.result().statusMessage()}")
                         myError()
                     }
 
                 } else {
                     ar.cause().printStackTrace()
-                    println("Logout failed: ${ar.cause().message}")
+                    logger.info("Logout failed: ${ar.cause().message}")
                     myError()
                 }
             }
@@ -583,11 +625,11 @@ class RESTVerticle(
                             )
                         )
                     } else {
-                        println("${ar.result().statusCode()} : ${ar.result().statusMessage()}")
+                        logger.info("${ar.result().statusCode()} : ${ar.result().statusMessage()}")
                         myError()
                     }
                 } else {
-                    println("Query Workspaces failed: ${ar.cause().message}")
+                    logger.info("Query Workspaces failed: ${ar.cause().message}")
                     myError()
                 }
 
