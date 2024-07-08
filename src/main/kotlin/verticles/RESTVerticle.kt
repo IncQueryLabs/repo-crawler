@@ -194,11 +194,16 @@ class RESTVerticle(
 
     private fun parseContainedElements(elementId: String, data: JsonObject, elementIDToParentPath: Map<String, String>): List<Pair<String, String>> {
 
+        val parentFQN = elementIDToParentPath[elementId] ?: "unknown"
         val element = safeReadKey(elementId, data, data::getJsonObject)
-        val elementStatus = safeReadKey("status", element, element!!::getInteger)
-
+        if (element == null) {
+            logger.warn("Element details cannot be parsed from the response. Element ID: $elementId; parent FQN: $parentFQN \n Response: \n ${data.encodePrettily()}")
+            return listOf()
+        }
+        val elementStatus = safeReadKey("status", element, element::getInteger)
         if(elementStatus == null || elementStatus != 200 ) {
-            logger.info("Unexpected status code ($elementStatus) was returned on fetching element details. Element server ID: $elementId, parent: ${elementIDToParentPath[elementId]}")
+            logger.warn("Unexpected status code ($elementStatus) was returned on fetching element details. Element server ID: $elementId, parent FQN: ${elementIDToParentPath[elementId]}")
+            return listOf()
         }
 
         val elementData = safeReadKey("data", element, element::getJsonArray)
@@ -210,7 +215,7 @@ class RESTVerticle(
             }
             if(elementData.size() > 1) {
                 val secondData = elementData.getJsonObject(1)
-                val parentName = safeReadKey("kerml:name", secondData, secondData!!::getString)
+                val parentName = safeReadKey("kerml:name", secondData, secondData::getString)
                 val parentType = safeReadKey("@type", secondData, secondData::getString)
                 val parentSegment = "$parentName (type: $parentType)"
                 return childElements?.map { childId -> Pair(childId, "${elementIDToParentPath.getOrDefault(elementId, "")} / $parentSegment") } ?: listOf()
@@ -220,7 +225,7 @@ class RESTVerticle(
             }
 
         } else {
-            logger.info("Unable to read child elements of empty element data. Parent: \n ${data.encodePrettily()}")
+            logger.info("Unable to read child elements of empty element data. Parent data: \n ${data.encodePrettily()}")
             listOf()
         }
     }

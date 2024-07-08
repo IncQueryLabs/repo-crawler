@@ -439,7 +439,7 @@ class MainVerticle(
                     }
                 }
                 ELEMENTS -> {
-                    //                    logger.info("Received Elements")
+                    logger.info("Received Elements")
                     val elements = JsonObject(messageData.obj as Map<String, Any>).mapTo(Elements::class.java)
                     val revisionId = elements.revision_id
                     val branchId = elements.branch_id

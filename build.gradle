@@ -11,6 +11,7 @@ ext.releaseProp = hasProperty("release") ? getProperty("release") : false
 ext.vertxVersion = hasProperty("vertxVersion") ? getProperty("vertxVersion"): "4.1.8"
 ext.jacksonDatabindVersion = findProperty("jacksonDatabindVersion") ?: '2.15.3'
 ext.loggingVersion = findProperty("loggingVersion") ?: "1.10.11"
+ext.logbackVersion = findProperty("logbackVersion") ?: "1.2.6"
 
 ext {
     buildTimestamp = timestampFormat.format(buildTime)
@@ -34,7 +35,7 @@ dependencies {
     compile "io.vertx:vertx-web:$vertxVersion"
     compile "io.vertx:vertx-web-client:$vertxVersion"
     compile "io.github.microutils:kotlin-logging:$loggingVersion"
-    runtimeOnly "ch.qos.logback:logback-classic:1.2.6"
+    runtimeOnly "ch.qos.logback:logback-classic:$logbackVersion"
     api group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: jacksonDatabindVersion
 }
 
