@@ -197,12 +197,12 @@ class RESTVerticle(
         val parentFQN = elementIDToParentPath[elementId] ?: "unknown"
         val element = safeReadKey(elementId, data, data::getJsonObject)
         if (element == null) {
-            logger.warn("Element details cannot be parsed from the response. Element ID: $elementId; parent FQN: $parentFQN \n Response: \n ${data.encodePrettily()}")
+            logger.error("Element details cannot be parsed from the response. Element ID: $elementId; parent FQN: $parentFQN \n Response: \n ${data.encodePrettily()}")
             return listOf()
         }
         val elementStatus = safeReadKey("status", element, element::getInteger)
         if(elementStatus == null || elementStatus != 200 ) {
-            logger.warn("Unexpected status code ($elementStatus) was returned on fetching element details. Element server ID: $elementId, parent FQN: ${elementIDToParentPath[elementId]}")
+            logger.error("Unexpected status code ($elementStatus) was returned on fetching element details. Element server ID: $elementId, parent FQN: $parentFQN")
             return listOf()
         }
 
@@ -220,12 +220,12 @@ class RESTVerticle(
                 val parentSegment = "$parentName (type: $parentType)"
                 return childElements?.map { childId -> Pair(childId, "${elementIDToParentPath.getOrDefault(elementId, "")} / $parentSegment") } ?: listOf()
             } else {
-                logger.info("Unable to name and type of the element. Raw data: \n ${data.encodePrettily()}")
+                logger.error("Unable to get name and type of the element. \n ${elementData.encodePrettily()} \n Parent data: \n ${data.encodePrettily()} \n Parent FQN: $parentFQN")
                 listOf()
             }
 
         } else {
-            logger.info("Unable to read child elements of empty element data. Parent data: \n ${data.encodePrettily()}")
+            logger.error("Unable to read child elements of empty element data: \n ${element.encodePrettily()} \n Parent data: \n ${data.encodePrettily()} \n Parent FQN: $parentFQN")
             listOf()
         }
     }
