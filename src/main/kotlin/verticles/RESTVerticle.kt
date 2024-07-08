@@ -46,50 +46,50 @@ class RESTVerticle(
                 }
                 GET_WORKSPACES -> {
                     if (debug) {
-                        logger.info("Query Workspaces")
-                        logger.info(obj.encodePrettily())
+                        logger.debug("Query Workspaces")
+                        logger.debug(obj.encodePrettily())
                     }
                     getWorkspaces(client, twcMap)
                 }
                 GET_RESOURCES -> {
                     if (debug) {
-                        logger.info("Query Resources")
-                        logger.info(obj.encodePrettily())
+                        logger.debug("Query Resources")
+                        logger.debug(obj.encodePrettily())
                     }
                     getResources(client, twcMap, obj)
                 }
                 GET_BRANCHES -> {
                     if (debug) {
-                        logger.info("Query Branches")
-                        logger.info(obj.encodePrettily())
+                        logger.debug("Query Branches")
+                        logger.debug(obj.encodePrettily())
                     }
                     getBranches(client, twcMap, obj)
                 }
                 GET_REVISIONS -> {
                     if (debug) {
-                        logger.info("Query Revisions")
-                        logger.info(obj.encodePrettily())
+                        logger.debug("Query Revisions")
+                        logger.debug(obj.encodePrettily())
                     }
                     getRevisions(client, twcMap, obj)
                 }
                 GET_ROOT_ELEMENT_IDS -> {
                     if (debug) {
-                        logger.info("Search Root Element Ids")
-                        logger.info(obj.encodePrettily())
+                        logger.debug("Search Root Element Ids")
+                        logger.debug(obj.encodePrettily())
                     }
                     getRootElementIds(client, twcMap, obj)
                 }
                 GET_ELEMENT -> {
                     if (debug) {
-                        logger.info("Query Element")
-                        logger.info(obj.encodePrettily())
+                        logger.debug("Query Element")
+                        logger.debug(obj.encodePrettily())
                     }
                     getElement(client, twcMap, obj)
                 }
                 GET_ELEMENTS -> {
                     if (debug) {
-                        logger.info("Query Elements")
-                        logger.info(obj.encodePrettily())
+                        logger.debug("Query Elements")
+                        logger.debug(obj.encodePrettily())
                     }
                     getElements(client, twcMap, obj)
                 }
@@ -217,7 +217,7 @@ class RESTVerticle(
                 val secondData = elementData.getJsonObject(1)
                 val parentName = safeReadKey("kerml:name", secondData, secondData::getString)
                 val parentType = safeReadKey("@type", secondData, secondData::getString)
-                val parentSegment = "$parentName (type: $parentType)"
+                val parentSegment = "$parentName (id: $elementId, type: $parentType)"
                 return childElements?.map { childId -> Pair(childId, "${elementIDToParentPath.getOrDefault(elementId, "")} / $parentSegment") } ?: listOf()
             } else {
                 logger.error("Unable to get name and type of the element. \n ${elementData.encodePrettily()} \n Parent data: \n ${data.encodePrettily()} \n Parent FQN: $parentFQN")

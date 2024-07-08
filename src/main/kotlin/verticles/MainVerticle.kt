@@ -80,6 +80,8 @@ class MainVerticle(
                     }
                 } else {
                     // Something went wrong!
+                    logger.error("Failed to get $QUERIES counter: ${queriesR.cause().message}")
+                    logger.debug("Failed to get $QUERIES counter", queriesR.cause())
                 }
             }
 
@@ -439,7 +441,7 @@ class MainVerticle(
                     }
                 }
                 ELEMENTS -> {
-                    logger.info("Received Elements")
+                    logger.trace("Received Elements")
                     val elements = JsonObject(messageData.obj as Map<String, Any>).mapTo(Elements::class.java)
                     val revisionId = elements.revision_id
                     val branchId = elements.branch_id
